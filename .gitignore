@@ -11,12 +11,16 @@ demenu_bot
 
 # Output of the go coverage tool
 *.out
+coverage.*
+*.coverprofile
+profile.cov
 
 # Dependency directories
 vendor/
 
 # Go workspace file
 go.work
+go.work.sum
 
 # Environment variables
 .env
@@ -36,4 +40,3 @@ storage/
 # OS
 .DS_Store
 Thumbs.db
-
