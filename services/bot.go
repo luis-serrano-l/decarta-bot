@@ -77,9 +77,10 @@ func (s *BotService) SendMessage(chatID int64, text string) error {
 }
 
 func (s *BotService) IsUserAllowed(userID int64) bool {
-	// If no allowed users specified, allow all (dev mode)
+	// If no allowed users specified, deny access
 	if len(s.config.AllowedUserIDs) == 0 {
-		return true
+		log.Printf("❌ Access denied: ALLOWED_USER_IDS is empty. No users are authorized.")
+		return false
 	}
 
 	// Check if user ID is in allowed list
@@ -90,6 +91,21 @@ func (s *BotService) IsUserAllowed(userID int64) bool {
 	}
 
 	return false
+}
+
+func (s *BotService) IsAdmin(userID int64) bool {
+	// Check if user ID is in admin list
+	for _, adminID := range s.config.AdminUserIDs {
+		if userID == adminID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *BotService) GetAdminUserIDs() []int64 {
+	return s.config.AdminUserIDs
 }
 
 // StartPolling starts long polling for updates (useful for local development)

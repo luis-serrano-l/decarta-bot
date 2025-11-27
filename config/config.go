@@ -14,6 +14,7 @@ type Config struct {
 	Environment      string
 	StoragePath      string
 	AllowedUserIDs   []int64 // Telegram user IDs allowed to send JSON files
+	AdminUserIDs     []int64 // Telegram user IDs with admin privileges (can use /myid and /status)
 	UsePolling       bool    // Use polling instead of webhook (for local development)
 }
 
@@ -45,6 +46,7 @@ func Load() *Config {
 		Environment:      getEnv("ENVIRONMENT", "development"),
 		StoragePath:      getEnv("STORAGE_PATH", "./storage"),
 		AllowedUserIDs:   parseUserIDs(getEnv("ALLOWED_USER_IDS", "")),
+		AdminUserIDs:     parseUserIDs(getEnv("ADMIN_USER_IDS", "")),
 		UsePolling:       getEnv("USE_POLLING", "true") == "true", // Default to polling for local dev
 	}
 }
