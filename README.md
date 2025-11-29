@@ -75,7 +75,8 @@ The bot uses a `.env` file for configuration. Create one from `.env.example`:
 - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token (obtained from @BotFather) - **Required**
 - `ENVIRONMENT`: Environment mode (development/production) - Default: development
 - `STORAGE_PATH`: Path where JSON files will be stored - Default: ./storage
-- `ALLOWED_USER_IDS`: Comma-separated list of Telegram user IDs allowed to send files (optional in dev mode)
+- `ALLOWED_USER_IDS`: Comma-separated list of Telegram user IDs allowed to send files (required - if empty, all users are denied)
+- `ADMIN_USER_IDS`: Comma-separated list of Telegram user IDs with admin privileges (can use `/myid` and `/status` commands)
 - `USE_POLLING`: Use polling instead of webhook (true/false) - Default: true (for local development)
 - `PORT`: Server port - Default: 8080
 
@@ -132,11 +133,13 @@ The bot accepts two types of JSON files:
    - Add your bot token: `TELEGRAM_BOT_TOKEN=your_actual_token_here`
    - The bot runs in **polling mode** by default (perfect for local development)
 
-3. **Find your Telegram User ID**
+3. **Find your Telegram User ID** (Admin only)
    - Start a chat with your bot on Telegram
-   - Send the command `/myid` to the bot
+   - Send the command `/myid` to the bot (requires admin access)
    - The bot will reply with your user ID
-   - Add it to `.env`: `ALLOWED_USER_IDS=your_user_id_here`
+   - Add it to `.env`: 
+     - `ALLOWED_USER_IDS=your_user_id_here` (to allow file uploads)
+     - `ADMIN_USER_IDS=your_user_id_here` (to grant admin privileges)
 
 4. **Install dependencies**
    ```bash
