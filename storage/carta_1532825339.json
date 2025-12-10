@@ -1,0 +1,33 @@
+{
+  "categories": [
+    {
+      "description": "Start your meal",
+      "id": "appetizers",
+      "items": [
+        {
+          "description": "Classic tomato basil",
+          "name": "Bruschetta",
+          "price": 12.99
+        },
+        {
+          "description": "Golden fried squid",
+          "name": "Calamari",
+          "price": 14.99
+        }
+      ],
+      "name": "Appetizers"
+    },
+    {
+      "description": "Fresh options",
+      "id": "salads",
+      "items": [
+        {
+          "description": "Crisp romaine",
+          "name": "Caesar Salad",
+          "price": 9.99
+        }
+      ],
+      "name": "Salads"
+    }
+  ]
+}

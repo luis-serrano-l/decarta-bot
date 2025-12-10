@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Development files
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+tmp/
+build-errors.log
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+testdata/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Air (hot reload)
+.air.toml
+
+# Scripts
+start_tunnel.sh
+check_env.sh
+
+# Storage (will be created at runtime)
+storage/*.json
+!storage/.gitkeep
+
+
+
