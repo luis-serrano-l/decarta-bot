@@ -16,6 +16,8 @@ type Config struct {
 	AllowedUserIDs   []int64 // Telegram user IDs allowed to send JSON files
 	AdminUserIDs     []int64 // Telegram user IDs with admin privileges (can use /myid and /status)
 	UsePolling       bool    // Use polling instead of webhook (for local development)
+	HashSecret       string  // Secret key for hashing user IDs (optional, has default)
+	HugoBaseURL      string  // Base URL of the Hugo site (for generating menu links)
 }
 
 func Load() *Config {
@@ -41,14 +43,24 @@ func Load() *Config {
 		log.Printf("✅ Found TELEGRAM_BOT_TOKEN: %s", preview)
 	}
 
-	return &Config{
+	cfg := &Config{
 		TelegramBotToken: token,
 		Environment:      getEnv("ENVIRONMENT", "development"),
 		StoragePath:      getEnv("STORAGE_PATH", "./storage"),
 		AllowedUserIDs:   parseUserIDs(getEnv("ALLOWED_USER_IDS", "")),
 		AdminUserIDs:     parseUserIDs(getEnv("ADMIN_USER_IDS", "")),
 		UsePolling:       getEnv("USE_POLLING", "true") == "true", // Default to polling for local dev
+		HashSecret:       getEnv("HASH_SECRET", ""),
+		HugoBaseURL:      getEnv("HUGO_BASE_URL", ""), // Hugo site base URL (required for menu links)
 	}
+	
+	// Initialize hash secret in utils if provided
+	if cfg.HashSecret != "" {
+		// We'll need to import utils here, but to avoid circular dependency,
+		// we'll set it in main.go after config is loaded
+	}
+	
+	return cfg
 }
 
 func getEnv(key, defaultValue string) string {

@@ -27,9 +27,9 @@ A Telegram bot built with Go and Gin framework that allows users to send JSON fi
 
 ### Phase 3: Integration with Hugo App
 - [x] Create API endpoint to serve JSON files to Hugo app
-- [ ] Update Hugo app to fetch JSON from bot API instead of local files
-- [ ] Set up webhook/trigger mechanism to rebuild Hugo site when JSON is updated
-- [ ] Deploy bot to production environment
+- [x] Update Hugo app to fetch JSON from bot API instead of local files
+- [x] Set up hash-based routing for user-specific menus
+- [x] Deploy bot to production environment (see [FREE_SERVER_SETUP.md](FREE_SERVER_SETUP.md))
 
 ### Phase 4: Additional Features (Future)
 - [ ] Implement JSON preview before saving
@@ -146,7 +146,33 @@ The bot accepts two types of JSON files:
    go mod tidy
    ```
 
-5. **Run the bot locally**
+5. **Install Air (for hot reload during development - optional but recommended)**
+   ```bash
+   # Using go install (recommended)
+   go install github.com/air-verse/air@latest
+   
+   # Add to PATH (add to ~/.zshrc or ~/.bashrc)
+   echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.zshrc
+   source ~/.zshrc  # or restart your terminal
+   
+   # Or using curl (Linux/Mac)
+   curl -sSfL https://raw.githubusercontent.com/air-verse/air/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+   
+   # Or using Homebrew (Mac)
+   brew install air
+   ```
+   
+   The project includes a `.air.toml` configuration file. Once Air is installed, you can use it instead of `go run`.
+
+6. **Run the bot locally**
+   
+   **Option A: Using Air (hot reload - recommended for development)**
+   ```bash
+   air
+   ```
+   Air will automatically rebuild and restart the bot when you make changes to `.go` files.
+   
+   **Option B: Using go run (standard)**
    ```bash
    go run main.go
    ```
@@ -176,6 +202,46 @@ The bot accepts two types of JSON files:
      -d "url=https://your-domain.com/webhook"
    ```
 
+## Deployment
+
+### Free Server Options
+
+Deploy your bot to a free hosting service:
+
+**Quick Start:** See [DEPLOYMENT_QUICK_START.md](DEPLOYMENT_QUICK_START.md) for a 5-minute setup guide.
+
+**Full Guide:** See [FREE_SERVER_SETUP.md](FREE_SERVER_SETUP.md) for detailed instructions for deployment platforms.
+
+### Deployment Files
+
+The repository includes:
+- `Dockerfile` - Container configuration
+
+### Required Environment Variables for Production
+
+```bash
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+ENVIRONMENT=production
+USE_POLLING=false  # Use webhook mode in production
+STORAGE_PATH=/app/storage
+HUGO_BASE_URL=https://your-username.github.io/demenu
+HASH_SECRET=your_secret_key_here  # Optional but recommended
+```
+
+### After Deployment
+
+1. Get your bot's public URL from the hosting platform
+2. Set the Telegram webhook:
+   ```bash
+   curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook?url=<YOUR_BOT_URL>/webhook"
+   ```
+3. Update Hugo config with your bot URL:
+   ```toml
+   # In demenu/hugo.production.toml
+   [params]
+     botApiUrl = "https://your-bot-url.com"
+   ```
+
 ## Development
 
 ### Local Testing
@@ -198,8 +264,10 @@ go test ./...
 ## API Endpoints
 
 - `POST /webhook` - Telegram webhook endpoint for receiving bot updates
-- `GET /api/meals.json` - Serves meals.json for Hugo app
-- `GET /api/menu.json` - Serves menu.json for Hugo app
+- `GET /api/meals.json` - Serves meals.json for Hugo app (default menu)
+- `GET /api/menu.json` - Serves menu.json for Hugo app (default menu)
+- `GET /api/user/:hash/menu.json` - Serves user-specific menu.json by hash
+- `GET /api/user/:hash/meals.json` - Serves user-specific meals.json by hash
 - `GET /health` - Health check endpoint
 
 ## Next Steps

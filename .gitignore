@@ -27,8 +27,10 @@ go.work.sum
 .env.local
 
 # Storage directory (contains user-uploaded JSON files)
-storage/
-*.json
+# Ignore example JSON files but allow carta_*.json files (user-specific menus)
+storage/*.json
+!storage/carta_*.json
+storage/message_refs.go
 
 # IDE
 .idea/
@@ -40,3 +42,7 @@ storage/
 # OS
 .DS_Store
 Thumbs.db
+
+# Air (hot reload tool)
+tmp/
+build-errors.log
