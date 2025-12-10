@@ -84,15 +84,12 @@ func (h *BotHandler) handleCommand(message *tgbotapi.Message) {
 	switch message.Command() {
 	case "start":
 		text := "👋 Welcome to the Demenu Bot!\n\n" +
-			"Create and manage your restaurant menu! Admins can use /template to get JSON templates, edit them, and send them back as text messages to update the menu.\n\n" +
+			"Create and manage your restaurant menu!\n\n" +
 			"📋 Commands:\n" +
 			"/start - Show this message\n" +
 			"/help - Show help information\n" +
 			"/myurl - Get your personal menu URL (share with customers)\n" +
-			"/template - Get JSON templates (Admin only)\n" +
-			"/request_access - Request access to update menu\n" +
-			"/status - Check bot status (Admin only)\n" +
-			"/myid - Get your Telegram user ID (Admin only)\n\n" +
+			"/request_access - Request access to update menu\n\n" +
 			"💡 Tip: Use /myurl to get your unique menu link after uploading content!"
 		h.botService.SendMessage(message.Chat.ID, text)
 
