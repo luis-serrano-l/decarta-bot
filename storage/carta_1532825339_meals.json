@@ -1,0 +1,16 @@
+{
+  "meals": [
+    {
+      "description": "Meal description",
+      "dietary": "Optional dietary info",
+      "image": "/images/meal.jpg",
+      "name": "Meal Name",
+      "price": 24.99
+    },
+    {
+      "description": "Another meal description",
+      "name": "Another Meal",
+      "price": 19.99
+    }
+  ]
+}
