@@ -2,7 +2,7 @@
   "categories": [
     {
       "description": "Start your meal",
-      "id": "appetizers",
+      "id": "rail",
       "items": [
         {
           "description": "Classic tomato basil",
@@ -15,7 +15,7 @@
           "price": 14.99
         }
       ],
-      "name": "Appetizers"
+      "name": "rail"
     },
     {
       "description": "Fresh options",
