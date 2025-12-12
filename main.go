@@ -50,10 +50,30 @@ func main() {
 
 	// Add CORS middleware for Hugo app
 	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		origin := c.Request.Header.Get("Origin")
+
+		// Allow requests from GitHub Pages and localhost for development
+		allowedOrigins := []string{
+			"https://luis-serrano-l.github.io",
+			"http://localhost:1313",
+			"http://localhost:8080",
+		}
+
+		// Check if origin is allowed, or allow all for development
+		allowOrigin := "*"
+		for _, allowed := range allowedOrigins {
+			if origin == allowed {
+				allowOrigin = origin
+				break
+			}
+		}
+
+		c.Writer.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+		// Note: Cannot use Access-Control-Allow-Credentials: true with Access-Control-Allow-Origin: *
+		// Removing credentials header to fix Brave browser blocking
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Max-Age", "3600")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
