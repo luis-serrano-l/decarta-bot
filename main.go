@@ -6,6 +6,7 @@ import (
 
 	"demenu_bot/config"
 	"demenu_bot/handlers"
+	"demenu_bot/middleware"
 	"demenu_bot/services"
 	"demenu_bot/utils"
 
@@ -43,6 +44,9 @@ func main() {
 
 	// Initialize router
 	router := gin.Default()
+
+	// Add access logging middleware (logs all requests with IP, path, hash, etc.)
+	router.Use(middleware.AccessLoggingMiddleware())
 
 	// Add CORS middleware for Hugo app
 	router.Use(func(c *gin.Context) {
