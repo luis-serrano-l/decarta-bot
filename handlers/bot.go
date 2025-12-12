@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -429,35 +430,67 @@ func (h *BotHandler) ServeMenuJSON(c *gin.Context) {
 	c.Data(200, "application/json", data)
 }
 
+// getClientIP extracts the client IP from the request, handling proxy headers
+func getClientIP(c *gin.Context) string {
+	// Check X-Forwarded-For header (first IP in chain)
+	forwarded := c.GetHeader("X-Forwarded-For")
+	if forwarded != "" {
+		// X-Forwarded-For can contain multiple IPs, take the first one
+		ips := strings.Split(forwarded, ",")
+		if len(ips) > 0 {
+			ip := strings.TrimSpace(ips[0])
+			if ip != "" {
+				return ip
+			}
+		}
+	}
+
+	// Check X-Real-IP header
+	realIP := c.GetHeader("X-Real-IP")
+	if realIP != "" {
+		return realIP
+	}
+
+	// Fall back to RemoteAddr
+	return c.ClientIP()
+}
+
 // ServeUserMenuJSON serves the menu.json file for a specific user by hash (reads from carta_{userID}.json)
 // Security: Only serves files matching carta_{userID}.json pattern from storage directory
 func (h *BotHandler) ServeUserMenuJSON(c *gin.Context) {
 	hash := c.Param("hash")
-	log.Printf("API request: GET /api/user/%s/menu.json", hash)
+	clientIP := getClientIP(c)
+
+	// Add security headers
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("X-Frame-Options", "DENY")
+	c.Header("X-XSS-Protection", "1; mode=block")
+
+	log.Printf("API request: GET /api/user/%s/menu.json from IP: %s", hash, clientIP)
 
 	// Decode hash to user ID
 	userID, err := utils.DecodeUserID(hash)
 	if err != nil {
-		log.Printf("Error decoding hash %s: %v", hash, err)
+		log.Printf("Error decoding hash %s from IP %s: %v", hash, clientIP, err)
 		c.JSON(400, gin.H{"error": "Invalid hash"})
 		return
 	}
-	log.Printf("Decoded hash %s to user ID: %d", hash, userID)
+	log.Printf("Decoded hash %s to user ID: %d (IP: %s)", hash, userID, clientIP)
 
 	// Security: Only allow reading carta_*.json files (validated in GetUserJSON)
 	// GetUserJSON ensures the filename is carta_{userID}.json and reads from storage directory only
 	data, err := h.storage.GetUserJSON(userID, "menu.json")
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("File carta_%d.json not found for user %d", userID, userID)
+			log.Printf("File carta_%d.json not found for user %d (IP: %s, hash: %s)", userID, userID, clientIP, hash)
 			c.JSON(404, gin.H{"error": "menu.json not found for this user. Please send your menu JSON via Telegram first."})
 			return
 		}
-		log.Printf("Error reading carta_%d.json for user %d: %v", userID, userID, err)
+		log.Printf("Error reading carta_%d.json for user %d from IP %s: %v", userID, userID, clientIP, err)
 		c.JSON(500, gin.H{"error": "Failed to read menu.json"})
 		return
 	}
 
-	log.Printf("Successfully retrieved carta_%d.json for user %d (hash: %s), size: %d bytes", userID, userID, hash, len(data))
+	log.Printf("Successfully retrieved carta_%d.json for user %d (hash: %s, IP: %s), size: %d bytes", userID, userID, hash, clientIP, len(data))
 	c.Data(200, "application/json", data)
 }
