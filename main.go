@@ -139,9 +139,35 @@ func main() {
 	// API endpoints to serve user-specific JSON files by hash
 	router.GET("/api/user/:hash/menu.json", botHandler.ServeUserMenuJSON)
 
+	// Debug endpoint for troubleshooting
+	router.GET("/api/debug/user/:hash", botHandler.DebugUserHash)
+
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
+		healthInfo := gin.H{
+			"status": "ok",
+		}
+
+		// Add storage type information
+		if cfg.StorageType != "" {
+			healthInfo["storage_type"] = cfg.StorageType
+		}
+
+		// If using PostgreSQL, try to check database connection
+		if cfg.StorageType == "postgres" && storageInstance != nil {
+			if pgStorage, ok := storageInstance.(interface {
+				Ping() error
+			}); ok {
+				if err := pgStorage.Ping(); err == nil {
+					healthInfo["database"] = "connected"
+				} else {
+					healthInfo["database"] = "disconnected"
+					healthInfo["database_error"] = err.Error()
+				}
+			}
+		}
+
+		c.JSON(200, healthInfo)
 	})
 
 	// Start bot in polling mode (for local development)

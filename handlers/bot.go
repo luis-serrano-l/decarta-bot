@@ -442,6 +442,8 @@ func (h *BotHandler) ServeUserMenuJSON(c *gin.Context) {
 	hash := c.Param("hash")
 	clientIP := getClientIP(c)
 
+	log.Printf("ServeUserMenuJSON: Received request for hash=%s (IP: %s)", hash, clientIP)
+
 	// Add security headers
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Header("X-Frame-Options", "DENY")
@@ -450,25 +452,80 @@ func (h *BotHandler) ServeUserMenuJSON(c *gin.Context) {
 	// Decode hash to user ID
 	userID, err := utils.DecodeUserID(hash)
 	if err != nil {
-		log.Printf("Invalid hash: %s (IP: %s)", hash, clientIP)
+		log.Printf("ServeUserMenuJSON: Invalid hash=%s (IP: %s) - Error: %v", hash, clientIP, err)
 		c.JSON(400, gin.H{"error": "Invalid hash"})
 		return
 	}
+
+	log.Printf("ServeUserMenuJSON: Hash=%s decoded to userID=%d (IP: %s)", hash, userID, clientIP)
 
 	// Security: Only allow reading carta_*.json files (validated in GetUserJSON)
 	// GetUserJSON ensures the filename is carta_{userID}.json and reads from storage directory only
 	data, err := h.storage.GetUserJSON(userID, "menu.json")
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("Menu not found: hash %s (user %d, IP: %s)", hash, userID, clientIP)
+			log.Printf("ServeUserMenuJSON: Menu not found - hash=%s, userID=%d (IP: %s)", hash, userID, clientIP)
 			c.JSON(404, gin.H{"error": "menu.json not found for this user. Please send your menu JSON via Telegram first."})
 			return
 		}
-		log.Printf("Error reading menu: user %d (IP: %s) - %s", userID, clientIP, err.Error())
+		log.Printf("ServeUserMenuJSON: Error reading menu - hash=%s, userID=%d (IP: %s) - Error: %v", hash, userID, clientIP, err)
 		c.JSON(500, gin.H{"error": "Failed to read menu.json"})
 		return
 	}
 
+	log.Printf("ServeUserMenuJSON: Successfully retrieved menu - hash=%s, userID=%d, dataSize=%d bytes (IP: %s)", hash, userID, len(data), clientIP)
 	// Success - middleware will log the request details
 	c.Data(200, "application/json", data)
+}
+
+// DebugUserHash provides debugging information about a hash
+// This endpoint helps diagnose issues with hash validation and database lookups
+func (h *BotHandler) DebugUserHash(c *gin.Context) {
+	hash := c.Param("hash")
+	clientIP := getClientIP(c)
+
+	log.Printf("DebugUserHash: Request for hash=%s (IP: %s)", hash, clientIP)
+
+	debugInfo := gin.H{
+		"hash":        hash,
+		"hash_length": len(hash),
+		"valid":       false,
+	}
+
+	// Try to decode hash
+	userID, err := utils.DecodeUserID(hash)
+	if err != nil {
+		debugInfo["error"] = err.Error()
+		debugInfo["user_id"] = nil
+		c.JSON(200, debugInfo) // Return 200 with error info for debugging
+		return
+	}
+
+	debugInfo["valid"] = true
+	debugInfo["user_id"] = userID
+
+	// Add storage type info
+	debugInfo["storage_type"] = h.config.StorageType
+
+	// Check if menu exists
+	exists := h.storage.UserHasJSON(userID, "menu.json")
+	debugInfo["menu_exists"] = exists
+
+	// Try to get menu data size if it exists
+	if exists {
+		data, err := h.storage.GetUserJSON(userID, "menu.json")
+		if err == nil {
+			debugInfo["menu_size_bytes"] = len(data)
+			// Include first 100 chars of JSON for verification
+			if len(data) > 100 {
+				debugInfo["menu_preview"] = string(data[:100]) + "..."
+			} else {
+				debugInfo["menu_preview"] = string(data)
+			}
+		} else {
+			debugInfo["menu_read_error"] = err.Error()
+		}
+	}
+
+	c.JSON(200, debugInfo)
 }

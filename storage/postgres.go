@@ -245,6 +245,39 @@ func (s *PostgresStorage) GetJSON(filename string) ([]byte, error) {
 	return nil, os.ErrNotExist
 }
 
+// ListAllUserIDs returns all user IDs that have menu data
+func (s *PostgresStorage) ListAllUserIDs() ([]int64, error) {
+	query := `SELECT user_id FROM user_menus ORDER BY user_id`
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query user IDs: %w", err)
+	}
+	defer rows.Close()
+
+	var userIDs []int64
+	for rows.Next() {
+		var userID int64
+		if err := rows.Scan(&userID); err != nil {
+			return nil, fmt.Errorf("failed to scan user ID: %w", err)
+		}
+		userIDs = append(userIDs, userID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return userIDs, nil
+}
+
+// Ping checks the database connection
+func (s *PostgresStorage) Ping() error {
+	if s.db == nil {
+		return fmt.Errorf("database connection is nil")
+	}
+	return s.db.Ping()
+}
+
 // Close closes the database connection
 func (s *PostgresStorage) Close() error {
 	if s.db != nil {
@@ -252,4 +285,3 @@ func (s *PostgresStorage) Close() error {
 	}
 	return nil
 }
-
