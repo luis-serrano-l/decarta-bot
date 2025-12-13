@@ -16,24 +16,34 @@ The endpoint is secured through:
 
 1. **Sign up:** https://railway.app (GitHub login)
 2. **New Project** → Deploy from GitHub → Select `demenu_bot` repo
-3. **Add Environment Variables:**
+3. **Add PostgreSQL Database:**
+   - In Railway dashboard, click **"+ New"** → **"Database"** → **"Add PostgreSQL"**
+   - Railway will automatically create a PostgreSQL service and provide `DATABASE_URL` environment variable
+4. **Add Environment Variables:**
+   - Go to your bot service → **Variables** tab
+   - Add these variables:
    ```
    TELEGRAM_BOT_TOKEN=your_token
    ENVIRONMENT=production
    USE_POLLING=false
    PORT=8080
-   STORAGE_PATH=/app/storage
+   STORAGE_TYPE=postgres
+   DATABASE_URL=<automatically set by Railway when you add PostgreSQL>
    HUGO_BASE_URL=https://your-username.github.io/demenu
    HASH_SECRET=your-secret-key-here
    ADMIN_USER_IDS=your_telegram_user_id
    ```
-4. **Deploy** (automatic)
-5. **Get URL** from Settings → Networking (e.g., `https://demenu-bot-production.up.railway.app`)
-6. **Set Telegram webhook:**
+   - **Note:** `DATABASE_URL` is automatically set by Railway when you add PostgreSQL service - you don't need to set it manually
+5. **Run Database Migration:**
+   - Railway will automatically run migrations on startup (table creation is handled in code)
+   - Or manually run: Connect to Railway PostgreSQL and execute `storage/migrations/001_create_user_menus.sql`
+6. **Deploy** (automatic)
+7. **Get URL** from Settings → Networking (e.g., `https://demenu-bot-production.up.railway.app`)
+8. **Set Telegram webhook:**
    ```bash
    curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook?url=<YOUR_RAILWAY_URL>/webhook"
    ```
-7. **Update Hugo config:** Set `botApiUrl` in `hugo.production.toml` to your Railway URL
+9. **Update Hugo config:** Set `botApiUrl` in `hugo.production.toml` to your Railway URL
 
 ### Option 2: Fly.io
 
@@ -199,7 +209,9 @@ sudo ufw enable
 | `ENVIRONMENT` | No | `production` or `development` | `production` |
 | `USE_POLLING` | No | `true` for local dev, `false` for webhook | `false` |
 | `PORT` | No | Server port (default: `8080`) | `8080` |
-| `STORAGE_PATH` | No | Path to storage directory | `/app/storage` |
+| `STORAGE_TYPE` | No | Storage backend: `file` or `postgres` (default: `file`) | `postgres` |
+| `STORAGE_PATH` | Conditional | Path to storage directory (only used when `STORAGE_TYPE=file`) | `/app/storage` |
+| `DATABASE_URL` | Conditional | PostgreSQL connection URL (required when `STORAGE_TYPE=postgres`, auto-set by Railway) | `postgresql://user:pass@host/db` |
 | `HUGO_BASE_URL` | ✅ Yes | Your GitHub Pages URL | `https://user.github.io/demenu` |
 | `HASH_SECRET` | Recommended | Secret for hash signing (use strong random string) | `your-secret-key-here` |
 | `ADMIN_USER_IDS` | Recommended | Comma-separated Telegram user IDs | `123456789,987654321` |
@@ -232,7 +244,7 @@ Example log entry:
 4. **Monitor Logs**: Regularly check access logs for suspicious activity
 5. **Keep Updated**: Regularly update Go and system packages
 6. **Firewall**: Only expose necessary ports (80, 443, 22)
-7. **Backup Storage**: Regularly backup the `storage/` directory
+7. **Backup Database**: If using PostgreSQL, Railway provides automatic backups. For file storage, regularly backup the `storage/` directory
 
 ## Verifying Deployment
 
@@ -259,7 +271,14 @@ curl "https://api.telegram.org/bot<TOKEN>/getWebhookInfo"
 ### Endpoint returns 404
 - Verify user has uploaded menu via Telegram (`/template` command)
 - Check hash is correct (use `/myurl` in Telegram bot)
-- Verify storage directory exists and has correct permissions
+- If using file storage: Verify storage directory exists and has correct permissions
+- If using PostgreSQL: Check database connection and verify table exists
+
+### Database connection errors
+- Verify `DATABASE_URL` is set correctly (Railway sets this automatically)
+- Check PostgreSQL service is running in Railway
+- Verify database table was created (check logs for "PostgreSQL storage initialized")
+- For local development: Ensure PostgreSQL is running and accessible
 
 ### CORS errors in browser
 - Verify CORS headers are set (already configured in code)
@@ -286,10 +305,55 @@ hugo --config hugo.production.toml
 # Deploy public/ directory to GitHub Pages
 ```
 
+## Local Development with PostgreSQL
+
+### Option 1: Docker PostgreSQL (Recommended)
+
+```bash
+# Start PostgreSQL in Docker
+docker run -d \
+  --name demenu-postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=demenu \
+  -p 5432:5432 \
+  postgres:15
+
+# Set environment variable
+export DATABASE_URL="postgres://postgres:postgres@localhost:5432/demenu?sslmode=disable"
+export STORAGE_TYPE=postgres
+```
+
+### Option 2: Local PostgreSQL Installation
+
+```bash
+# Install PostgreSQL (Ubuntu/Debian)
+sudo apt install postgresql postgresql-contrib
+
+# Create database
+sudo -u postgres createdb demenu
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+
+# Set environment variable
+export DATABASE_URL="postgres://postgres:postgres@localhost:5432/demenu?sslmode=disable"
+export STORAGE_TYPE=postgres
+```
+
+### Option 3: Use File Storage (Fallback)
+
+If PostgreSQL is not available, the bot will use file storage by default:
+```bash
+export STORAGE_TYPE=file
+export STORAGE_PATH=./storage
+```
+
 ## Monitoring and Maintenance
 
 - **Logs**: Check application logs regularly for errors
-- **Storage**: Monitor disk usage of `storage/` directory
+- **Storage**: 
+  - File storage: Monitor disk usage of `storage/` directory
+  - PostgreSQL: Railway provides automatic backups and monitoring
 - **Updates**: Keep Go version and dependencies updated
-- **Backups**: Regularly backup `storage/` directory and `.env` file
+- **Backups**: 
+  - File storage: Regularly backup `storage/` directory and `.env` file
+  - PostgreSQL: Railway provides automatic backups, or use `pg_dump` for manual backups
 

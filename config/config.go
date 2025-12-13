@@ -18,6 +18,8 @@ type Config struct {
 	UsePolling       bool    // Use polling instead of webhook (for local development)
 	HashSecret       string  // Secret key for hashing user IDs (optional, has default)
 	HugoBaseURL      string  // Base URL of the Hugo site (for generating menu links)
+	DatabaseURL      string  // PostgreSQL database URL (for postgres storage type)
+	StorageType      string  // Storage type: "file" or "postgres" (default: "file")
 }
 
 func Load() *Config {
@@ -27,12 +29,12 @@ func Load() *Config {
 		log.Printf("Warning: Could not load .env file from %s: %v", envPath, err)
 		log.Println("Trying to use environment variables instead...")
 	} else {
-		log.Printf("✅ Loaded .env file from %s", envPath)
+		log.Printf("Loaded .env file from %s", envPath)
 	}
 
 	token := getEnv("TELEGRAM_BOT_TOKEN", "")
 	if token == "" {
-		log.Println("⚠️  WARNING: TELEGRAM_BOT_TOKEN is empty!")
+		log.Println("WARNING: TELEGRAM_BOT_TOKEN is empty!")
 		log.Println("   Make sure your .env file contains: TELEGRAM_BOT_TOKEN=your_token_here")
 	} else {
 		// Show first few chars for debugging (without exposing full token)
@@ -40,7 +42,13 @@ func Load() *Config {
 		if len(preview) > 10 {
 			preview = preview[:10] + "..."
 		}
-		log.Printf("✅ Found TELEGRAM_BOT_TOKEN: %s", preview)
+		log.Printf("Found TELEGRAM_BOT_TOKEN: %s", preview)
+	}
+
+	storageType := getEnv("STORAGE_TYPE", "file")
+	if storageType != "file" && storageType != "postgres" {
+		log.Printf("WARNING: Invalid STORAGE_TYPE '%s', defaulting to 'file'", storageType)
+		storageType = "file"
 	}
 
 	cfg := &Config{
@@ -52,14 +60,16 @@ func Load() *Config {
 		UsePolling:       getEnv("USE_POLLING", "true") == "true", // Default to polling for local dev
 		HashSecret:       getEnv("HASH_SECRET", ""),
 		HugoBaseURL:      getEnv("HUGO_BASE_URL", ""), // Hugo site base URL (required for menu links)
+		DatabaseURL:      getEnv("DATABASE_URL", ""),  // PostgreSQL connection URL (Railway provides this)
+		StorageType:      storageType,                 // Storage type: "file" or "postgres"
 	}
-	
+
 	// Initialize hash secret in utils if provided
 	if cfg.HashSecret != "" {
 		// We'll need to import utils here, but to avoid circular dependency,
 		// we'll set it in main.go after config is loaded
 	}
-	
+
 	return cfg
 }
 

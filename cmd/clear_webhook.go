@@ -3,7 +3,6 @@ package main
 import (
 	"demenu_bot/config"
 	"log"
-	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -27,7 +26,6 @@ func main() {
 		log.Fatalf("Failed to clear webhook: %v", err)
 	}
 
-	log.Println("✅ Webhook cleared successfully!")
+	log.Println("Webhook cleared successfully!")
 	log.Println("Now you can use polling mode. Run: go run main.go")
 }
-

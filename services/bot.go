@@ -37,7 +37,7 @@ func NewBotService(cfg *config.Config) (*BotService, error) {
 
 	bot.Debug = cfg.Environment == "development"
 
-	log.Printf("✅ Authorized on account %s (ID: %d)", bot.Self.UserName, bot.Self.ID)
+	log.Printf("Authorized on account %s (ID: %d)", bot.Self.UserName, bot.Self.ID)
 
 	// If using polling, clear any existing webhook
 	if cfg.UsePolling {
@@ -46,7 +46,7 @@ func NewBotService(cfg *config.Config) (*BotService, error) {
 		if err != nil {
 			log.Printf("Warning: Could not clear webhook (might not exist): %v", err)
 		} else {
-			log.Println("✅ Webhook cleared - ready for polling")
+			log.Println("Webhook cleared - ready for polling")
 		}
 	}
 
@@ -79,7 +79,7 @@ func (s *BotService) SendMessage(chatID int64, text string) error {
 func (s *BotService) IsUserAllowed(userID int64) bool {
 	// If no allowed users specified, deny access
 	if len(s.config.AllowedUserIDs) == 0 {
-		log.Printf("❌ Access denied: ALLOWED_USER_IDS is empty. No users are authorized.")
+		log.Printf("Access denied: ALLOWED_USER_IDS is empty. No users are authorized.")
 		return false
 	}
 

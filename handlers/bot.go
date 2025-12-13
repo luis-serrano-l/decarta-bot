@@ -17,14 +17,14 @@ import (
 
 type BotHandler struct {
 	config     *config.Config
-	storage    *storage.Storage // For validation and user JSON storage (carta_{userID}.json)
+	storage    storage.Storage // For validation and user JSON storage (carta_{userID}.json)
 	botService *services.BotService
 }
 
-func NewBotHandler(cfg *config.Config, botService *services.BotService) *BotHandler {
+func NewBotHandler(cfg *config.Config, botService *services.BotService, storage storage.Storage) *BotHandler {
 	return &BotHandler{
 		config:     cfg,
-		storage:    storage.NewStorage(cfg.StoragePath), // For validation and file storage
+		storage:    storage,
 		botService: botService,
 	}
 }
@@ -195,7 +195,7 @@ func (h *BotHandler) handleRequestAccess(message *tgbotapi.Message) {
 	// Get all admin user IDs and send notification
 	adminUserIDs := h.botService.GetAdminUserIDs()
 	if len(adminUserIDs) == 0 {
-		log.Printf("⚠️  Access request from user %d, but no admin users configured", userID)
+		log.Printf("WARNING: Access request from user %d, but no admin users configured", userID)
 		return
 	}
 

@@ -2,7 +2,7 @@
   "categories": [
     {
       "description": "Start your meal",
-      "id": "luis",
+      "id": "devappetizers",
       "items": [
         {
           "description": "Classic tomato basil",
@@ -15,7 +15,7 @@
           "price": 14.99
         }
       ],
-      "name": "Luis"
+      "name": "DevAppetizers"
     },
     {
       "description": "Fresh options",

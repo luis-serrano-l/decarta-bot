@@ -8,6 +8,7 @@ import (
 	"demenu_bot/handlers"
 	"demenu_bot/middleware"
 	"demenu_bot/services"
+	"demenu_bot/storage"
 	"demenu_bot/utils"
 
 	"github.com/gin-gonic/gin"
@@ -35,6 +36,26 @@ func main() {
 
 	if botService == nil {
 		log.Fatal("ERROR: Bot service is nil. Check your TELEGRAM_BOT_TOKEN.")
+	}
+
+	// Initialize storage based on storage type
+	var storageInstance storage.Storage
+
+	if cfg.StorageType == "postgres" {
+		if cfg.DatabaseURL == "" {
+			log.Fatal("ERROR: DATABASE_URL not set. Required when STORAGE_TYPE=postgres")
+		}
+		log.Println("Initializing PostgreSQL storage...")
+		pgStorage, err := storage.NewPostgresStorage(cfg.DatabaseURL)
+		if err != nil {
+			log.Fatalf("Failed to initialize PostgreSQL storage: %v", err)
+		}
+		storageInstance = pgStorage
+		log.Println("PostgreSQL storage initialized")
+	} else {
+		log.Println("Initializing file storage...")
+		storageInstance = storage.NewFileStorage(cfg.StoragePath)
+		log.Printf("File storage initialized at: %s", cfg.StoragePath)
 	}
 
 	// Set Gin mode
@@ -84,7 +105,7 @@ func main() {
 	})
 
 	// Initialize handlers
-	botHandler := handlers.NewBotHandler(cfg, botService)
+	botHandler := handlers.NewBotHandler(cfg, botService, storageInstance)
 
 	// Webhook endpoint for Telegram (only used in production)
 	if !cfg.UsePolling {
