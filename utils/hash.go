@@ -3,7 +3,6 @@ package utils
 import (
 	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
 )
 
@@ -28,57 +27,133 @@ func DecodeUserID(hash string) (int64, error) {
 	return SimpleDecodeUserID(hash)
 }
 
-// SimpleEncodeUserID creates a simpler reversible encoding
-// Format: base64(userID_bytes + HMAC_signature)
+// base62Chars is the character set for base62 encoding (URL-safe, no padding needed)
+const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+// encodeBase62 encodes a number to base62 string with optional padding
+func encodeBase62(n uint64, minLength int) string {
+	if n == 0 {
+		result := "0"
+		for len(result) < minLength {
+			result = "0" + result
+		}
+		return result
+	}
+	var result []byte
+	for n > 0 {
+		result = append([]byte{base62Chars[n%62]}, result...)
+		n /= 62
+	}
+	// Pad to minimum length
+	for len(result) < minLength {
+		result = append([]byte{'0'}, result...)
+	}
+	return string(result)
+}
+
+// decodeBase62 decodes a base62 string to a number
+func decodeBase62(s string) (uint64, error) {
+	var result uint64
+	for _, char := range s {
+		idx := -1
+		for i, c := range base62Chars {
+			if c == char {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			return 0, fmt.Errorf("invalid base62 character: %c", char)
+		}
+		result = result*62 + uint64(idx)
+	}
+	return result, nil
+}
+
+// SimpleEncodeUserID creates a shorter reversible encoding
+// Format: base62(userID, 7 chars) + base62(signature, 6 chars) = 13 chars total
+// Uses 4-byte signature for shorter hash while maintaining security
 func SimpleEncodeUserID(userID int64) string {
 	// Convert user ID to bytes
 	userIDBytes := make([]byte, 8)
 	for i := 0; i < 8; i++ {
 		userIDBytes[i] = byte(userID >> (56 - i*8))
 	}
-	
-	// Create HMAC signature
+
+	// Create HMAC signature (use 4 bytes for shorter hash)
 	h := hmac.New(sha256.New, hashSecret)
 	h.Write(userIDBytes)
-	signature := h.Sum(nil)[:8] // Use first 8 bytes of signature
-	
-	// Combine userID + signature
-	combined := append(userIDBytes, signature...)
-	
-	// Encode to base64 URL-safe
-	return base64.URLEncoding.EncodeToString(combined)
+	signature := h.Sum(nil)[:4] // Use first 4 bytes of signature
+
+	// Convert userID to uint64 for base62 encoding
+	var userIDUint uint64
+	for i := 0; i < 8; i++ {
+		userIDUint = userIDUint<<8 | uint64(userIDBytes[i])
+	}
+
+	// Convert signature to uint32 for base62 encoding
+	var sigUint uint32
+	for i := 0; i < 4; i++ {
+		sigUint = sigUint<<8 | uint32(signature[i])
+	}
+
+	// Encode both to base62 with fixed lengths (7 chars for userID, 6 for signature)
+	userIDStr := encodeBase62(userIDUint, 7)
+	sigStr := encodeBase62(uint64(sigUint), 6)
+
+	// Combine: total 13 characters (much shorter than 24!)
+	return userIDStr + sigStr
 }
 
-// SimpleDecodeUserID decodes the simple encoding back to user ID
+// SimpleDecodeUserID decodes the shorter encoding back to user ID
+// Format: 7 chars (userID) + 6 chars (signature) = 13 chars total
 func SimpleDecodeUserID(hash string) (int64, error) {
-	// Decode base64
-	decoded, err := base64.URLEncoding.DecodeString(hash)
+	if len(hash) != 13 {
+		return 0, fmt.Errorf("invalid hash length: expected 13 characters, got %d", len(hash))
+	}
+
+	// Split: first 7 chars = userID, last 6 chars = signature
+	userIDStr := hash[:7]
+	sigStr := hash[7:]
+
+	// Decode userID
+	userID, err := decodeBase62(userIDStr)
 	if err != nil {
-		return 0, fmt.Errorf("invalid hash format: %w", err)
+		return 0, fmt.Errorf("invalid userID encoding: %w", err)
 	}
-	
-	// Should be 16 bytes: 8 bytes userID + 8 bytes signature
-	if len(decoded) != 16 {
-		return 0, fmt.Errorf("invalid hash length")
+
+	// Decode signature
+	sig, err := decodeBase62(sigStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid signature encoding: %w", err)
 	}
-	
-	// Extract userID bytes
-	userIDBytes := decoded[:8]
-	signature := decoded[8:]
-	
+
+	// Convert userID back to bytes
+	userIDBytes := make([]byte, 8)
+	for i := 7; i >= 0; i-- {
+		userIDBytes[i] = byte(userID)
+		userID >>= 8
+	}
+
 	// Verify signature
 	h := hmac.New(sha256.New, hashSecret)
 	h.Write(userIDBytes)
-	expectedSignature := h.Sum(nil)[:8]
-	
-	if !hmac.Equal(signature, expectedSignature) {
-		return 0, fmt.Errorf("invalid hash signature")
-	}
-	
-	// Convert bytes to int64
-	userID := int64(userIDBytes[0])<<56 | int64(userIDBytes[1])<<48 | int64(userIDBytes[2])<<40 | int64(userIDBytes[3])<<32 |
-		int64(userIDBytes[4])<<24 | int64(userIDBytes[5])<<16 | int64(userIDBytes[6])<<8 | int64(userIDBytes[7])
-	
-	return userID, nil
-}
+	expectedSignature := h.Sum(nil)[:4]
 
+	var expectedSig uint32
+	for i := 0; i < 4; i++ {
+		expectedSig = expectedSig<<8 | uint32(expectedSignature[i])
+	}
+
+	if uint32(sig) != expectedSig {
+		return 0, fmt.Errorf("invalid hash: signature verification failed")
+	}
+
+	// Convert back to int64
+	var result int64
+	for i := 0; i < 8; i++ {
+		result = result<<8 | int64(userIDBytes[i])
+	}
+
+	return result, nil
+}

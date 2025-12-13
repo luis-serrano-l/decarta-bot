@@ -49,32 +49,26 @@ func (h *BotHandler) ProcessUpdate(update *tgbotapi.Update) {
 		return
 	}
 
-	log.Printf("Received update: %+v", update)
-
 	// Handle commands
 	if update.Message != nil && update.Message.IsCommand() {
-		log.Printf("Processing command: %s from user %d", update.Message.Command(), update.Message.From.ID)
 		h.handleCommand(update.Message)
 		return
 	}
 
 	// Handle edited messages (for JSON template editing)
 	if update.EditedMessage != nil {
-		log.Printf("Processing edited message from user %d", update.EditedMessage.From.ID)
 		h.handleJSONMessage(update.EditedMessage)
 		return
 	}
 
 	// Handle regular messages (for JSON template editing)
 	if update.Message != nil && update.Message.Text != "" {
-		log.Printf("Processing text message from user %d", update.Message.From.ID)
 		h.handleJSONMessage(update.Message)
 		return
 	}
 
 	// Handle other messages
 	if update.Message != nil {
-		log.Printf("Processing message from user %d", update.Message.From.ID)
 		h.handleMessage(update.Message)
 	}
 }
@@ -137,8 +131,6 @@ func (h *BotHandler) handleCommand(message *tgbotapi.Message) {
 		text := "❓ Unknown command. Use /help to see available commands."
 		h.botService.SendMessage(message.Chat.ID, text)
 	}
-
-	log.Printf("Command %s from user %d", message.Command(), userID)
 }
 
 func (h *BotHandler) handleHelp(message *tgbotapi.Message) {
@@ -211,13 +203,11 @@ func (h *BotHandler) handleRequestAccess(message *tgbotapi.Message) {
 	notificationText := fmt.Sprintf("🔔 Access requested from user:\n\n%s", userInfo)
 	for _, adminID := range adminUserIDs {
 		if err := h.botService.SendMessage(adminID, notificationText); err != nil {
-			log.Printf("Error sending access request notification to admin %d: %v", adminID, err)
-		} else {
-			log.Printf("Access request notification sent to admin %d", adminID)
+			log.Printf("Error sending access request notification to admin %d: %s", adminID, err.Error())
 		}
 	}
 
-	log.Printf("Access request processed from user %d, notifications sent to %d admin(s)", userID, len(adminUserIDs))
+	log.Printf("Access request: user %d → %d admin(s)", userID, len(adminUserIDs))
 }
 
 func (h *BotHandler) handleTemplate(message *tgbotapi.Message) {
@@ -282,24 +272,15 @@ func (h *BotHandler) handleMyURL(message *tgbotapi.Message) {
 	// Check if user has any content stored
 	hasMenu := h.storage.UserHasJSON(userID, "menu.json")
 
-	text := "🔗 Your Personal Menu URL\n\n"
-	text += fmt.Sprintf("%s\n\n", menuURL)
-
+	url := fmt.Sprintf("%s\n\n", menuURL)
+	var text string
 	if hasMenu {
-		text += "✅ You have menu content stored.\n"
-		text += "\n✨ Your menu is live and accessible at the URL above!\n"
-		text += "Share this link with your customers to view your menu."
+		text = fmt.Sprintf("Updated url %s for user %d", url, userID)
 	} else {
-		text += "⚠️ You haven't uploaded any menu content yet.\n\n"
-		text += "📝 To add content:\n"
-		text += "1. Use /template to get the menu template\n"
-		text += "2. Edit and send it as a text message\n"
-		text += "3. Your menu will be available at this URL\n\n"
-		text += "💡 This is your personal menu URL - it's unique to you and will always show your latest menu content."
+		text = fmt.Sprintf("New url %s for user %d", url, userID)
 	}
 
 	h.botService.SendMessage(message.Chat.ID, text)
-	log.Printf("Menu URL sent to user %d: %s", userID, menuURL)
 }
 
 func (h *BotHandler) handleJSONMessage(message *tgbotapi.Message) {
@@ -330,7 +311,7 @@ func (h *BotHandler) handleJSONMessage(message *tgbotapi.Message) {
 		if err := json.Unmarshal([]byte(text), &jsonData); err != nil {
 			errorMsg := fmt.Sprintf("❌ Invalid JSON format:\n\n`%v`\n\nPlease check your JSON syntax and try again.", err)
 			h.botService.SendMessage(message.Chat.ID, errorMsg)
-			log.Printf("Invalid JSON from user %d: %v", userID, err)
+			log.Printf("Invalid JSON from user %d", userID)
 			return
 		}
 
@@ -356,7 +337,7 @@ func (h *BotHandler) handleJSONMessage(message *tgbotapi.Message) {
 		if err != nil {
 			errorMsg := fmt.Sprintf("❌ Invalid list format:\n\n`%v`\n\nUse /template to see the correct format.", err)
 			h.botService.SendMessage(message.Chat.ID, errorMsg)
-			log.Printf("Invalid list format from user %d: %v", userID, err)
+			log.Printf("Invalid list format from user %d", userID)
 			return
 		}
 		filename = "menu.json"
@@ -366,7 +347,7 @@ func (h *BotHandler) handleJSONMessage(message *tgbotapi.Message) {
 	if err := h.storage.ValidateJSON(filename, jsonData); err != nil {
 		errorMsg := fmt.Sprintf("❌ Invalid JSON structure for %s:\n\n`%v`\n\nUse /template to see the correct format.", filename, err)
 		h.botService.SendMessage(message.Chat.ID, errorMsg)
-		log.Printf("Invalid JSON structure from user %d: %v", userID, err)
+		log.Printf("Invalid JSON structure from user %d: %s", userID, err.Error())
 		return
 	}
 
@@ -374,7 +355,7 @@ func (h *BotHandler) handleJSONMessage(message *tgbotapi.Message) {
 	if err := h.storage.SaveUserJSON(userID, filename, jsonData); err != nil {
 		errorMsg := fmt.Sprintf("❌ Error saving %s: %v", filename, err)
 		h.botService.SendMessage(message.Chat.ID, errorMsg)
-		log.Printf("Error saving JSON file for user %d: %v", userID, err)
+		log.Printf("Error saving JSON file for user %d: %s", userID, err.Error())
 		return
 	}
 
@@ -384,13 +365,13 @@ func (h *BotHandler) handleJSONMessage(message *tgbotapi.Message) {
 	if baseURL == "" {
 		successMsg := fmt.Sprintf("✅ Successfully saved %s!\n\n⚠️ Warning: Hugo base URL not configured. Set HUGO_BASE_URL in bot configuration to get your menu link.\n\n💡 Use /myurl to get your menu URL once configured.", filename)
 		h.botService.SendMessage(message.Chat.ID, successMsg)
-		log.Printf("JSON saved to carta_%d.json for user %d (hash: %s) - HugoBaseURL not set", userID, userID, hash)
+		log.Printf("Menu saved: user %d (hash: %s) - HugoBaseURL not set", userID, hash)
 		return
 	}
 	menuURL := fmt.Sprintf("%s/menu/%s", baseURL, hash)
 	successMsg := fmt.Sprintf("✅ Successfully saved %s!\n\n🔗 Your personal menu URL:\n%s\n\n✨ Your menu is now live! Share this link with your customers.\n\n💡 Use /myurl anytime to get your menu link.", filename, menuURL)
 	h.botService.SendMessage(message.Chat.ID, successMsg)
-	log.Printf("JSON saved to carta_%d.json for user %d (hash: %s)", userID, userID, hash)
+	log.Printf("Menu saved: user %d (hash: %s)", userID, hash)
 }
 
 func (h *BotHandler) handleMessage(message *tgbotapi.Message) {
@@ -466,31 +447,28 @@ func (h *BotHandler) ServeUserMenuJSON(c *gin.Context) {
 	c.Header("X-Frame-Options", "DENY")
 	c.Header("X-XSS-Protection", "1; mode=block")
 
-	log.Printf("API request: GET /api/user/%s/menu.json from IP: %s", hash, clientIP)
-
 	// Decode hash to user ID
 	userID, err := utils.DecodeUserID(hash)
 	if err != nil {
-		log.Printf("Error decoding hash %s from IP %s: %v", hash, clientIP, err)
+		log.Printf("Invalid hash: %s (IP: %s)", hash, clientIP)
 		c.JSON(400, gin.H{"error": "Invalid hash"})
 		return
 	}
-	log.Printf("Decoded hash %s to user ID: %d (IP: %s)", hash, userID, clientIP)
 
 	// Security: Only allow reading carta_*.json files (validated in GetUserJSON)
 	// GetUserJSON ensures the filename is carta_{userID}.json and reads from storage directory only
 	data, err := h.storage.GetUserJSON(userID, "menu.json")
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("File carta_%d.json not found for user %d (IP: %s, hash: %s)", userID, userID, clientIP, hash)
+			log.Printf("Menu not found: hash %s (user %d, IP: %s)", hash, userID, clientIP)
 			c.JSON(404, gin.H{"error": "menu.json not found for this user. Please send your menu JSON via Telegram first."})
 			return
 		}
-		log.Printf("Error reading carta_%d.json for user %d from IP %s: %v", userID, userID, clientIP, err)
+		log.Printf("Error reading menu: user %d (IP: %s) - %s", userID, clientIP, err.Error())
 		c.JSON(500, gin.H{"error": "Failed to read menu.json"})
 		return
 	}
 
-	log.Printf("Successfully retrieved carta_%d.json for user %d (hash: %s, IP: %s), size: %d bytes", userID, userID, hash, clientIP, len(data))
+	// Success - middleware will log the request details
 	c.Data(200, "application/json", data)
 }
