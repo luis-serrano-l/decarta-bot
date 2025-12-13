@@ -108,6 +108,31 @@ func (s *BotService) GetAdminUserIDs() []int64 {
 	return s.config.AdminUserIDs
 }
 
+// SetWebhook sets the Telegram webhook URL
+func (s *BotService) SetWebhook(webhookURL string) error {
+	if s.bot == nil {
+		return fmt.Errorf("bot is nil")
+	}
+
+	if webhookURL == "" {
+		return fmt.Errorf("webhook URL is empty")
+	}
+
+	log.Printf("Setting webhook URL: %s", webhookURL)
+	wh, err := tgbotapi.NewWebhook(webhookURL)
+	if err != nil {
+		return fmt.Errorf("failed to create webhook config: %w", err)
+	}
+
+	_, err = s.bot.Request(wh)
+	if err != nil {
+		return fmt.Errorf("failed to set webhook: %w", err)
+	}
+
+	log.Println("Webhook set successfully")
+	return nil
+}
+
 // StartPolling starts long polling for updates (useful for local development)
 func (s *BotService) StartPolling(updateHandler func(*tgbotapi.Update)) error {
 	if s.bot == nil {

@@ -20,6 +20,7 @@ type Config struct {
 	HugoBaseURL      string  // Base URL of the Hugo site (for generating menu links)
 	DatabaseURL      string  // PostgreSQL database URL (for postgres storage type)
 	StorageType      string  // Storage type: "file" or "postgres" (default: "file")
+	WebhookURL       string  // Webhook URL for Telegram (auto-set in production)
 }
 
 func Load() *Config {
@@ -51,6 +52,16 @@ func Load() *Config {
 		storageType = "file"
 	}
 
+	// Determine webhook URL - check WEBHOOK_URL first, then try Railway's RAILWAY_PUBLIC_DOMAIN
+	webhookURL := getEnv("WEBHOOK_URL", "")
+	if webhookURL == "" {
+		// Railway provides RAILWAY_PUBLIC_DOMAIN environment variable
+		railwayDomain := getEnv("RAILWAY_PUBLIC_DOMAIN", "")
+		if railwayDomain != "" {
+			webhookURL = "https://" + railwayDomain + "/webhook"
+		}
+	}
+
 	cfg := &Config{
 		TelegramBotToken: token,
 		Environment:      getEnv("ENVIRONMENT", "development"),
@@ -62,6 +73,7 @@ func Load() *Config {
 		HugoBaseURL:      getEnv("HUGO_BASE_URL", ""), // Hugo site base URL (required for menu links)
 		DatabaseURL:      getEnv("DATABASE_URL", ""),  // PostgreSQL connection URL (Railway provides this)
 		StorageType:      storageType,                 // Storage type: "file" or "postgres"
+		WebhookURL:       webhookURL,                  // Webhook URL (auto-detected from Railway or set manually)
 	}
 
 	// Initialize hash secret in utils if provided

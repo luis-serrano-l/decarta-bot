@@ -43,15 +43,23 @@ func main() {
 
 	if cfg.StorageType == "postgres" {
 		if cfg.DatabaseURL == "" {
-			log.Fatal("ERROR: DATABASE_URL not set. Required when STORAGE_TYPE=postgres")
+			log.Printf("WARNING: STORAGE_TYPE=postgres but DATABASE_URL not set. Falling back to file storage.")
+			log.Println("Initializing file storage...")
+			storageInstance = storage.NewFileStorage(cfg.StoragePath)
+			log.Printf("File storage initialized at: %s", cfg.StoragePath)
+		} else {
+			log.Println("Initializing PostgreSQL storage...")
+			pgStorage, err := storage.NewPostgresStorage(cfg.DatabaseURL)
+			if err != nil {
+				log.Printf("ERROR: Failed to initialize PostgreSQL storage: %v", err)
+				log.Printf("WARNING: Falling back to file storage due to PostgreSQL connection failure.")
+				storageInstance = storage.NewFileStorage(cfg.StoragePath)
+				log.Printf("File storage initialized at: %s", cfg.StoragePath)
+			} else {
+				storageInstance = pgStorage
+				log.Println("PostgreSQL storage initialized")
+			}
 		}
-		log.Println("Initializing PostgreSQL storage...")
-		pgStorage, err := storage.NewPostgresStorage(cfg.DatabaseURL)
-		if err != nil {
-			log.Fatalf("Failed to initialize PostgreSQL storage: %v", err)
-		}
-		storageInstance = pgStorage
-		log.Println("PostgreSQL storage initialized")
 	} else {
 		log.Println("Initializing file storage...")
 		storageInstance = storage.NewFileStorage(cfg.StoragePath)
@@ -110,7 +118,19 @@ func main() {
 	// Webhook endpoint for Telegram (only used in production)
 	if !cfg.UsePolling {
 		router.POST("/webhook", botHandler.HandleWebhook)
-		log.Println("Webhook mode enabled. Set webhook URL in Telegram.")
+
+		// Automatically set webhook if URL is configured
+		if cfg.WebhookURL != "" {
+			log.Printf("Webhook mode enabled. Setting webhook URL automatically...")
+			if err := botService.SetWebhook(cfg.WebhookURL); err != nil {
+				log.Printf("WARNING: Failed to set webhook automatically: %v", err)
+				log.Printf("You may need to set it manually: curl -X POST \"https://api.telegram.org/bot<TOKEN>/setWebhook?url=%s\"", cfg.WebhookURL)
+			}
+		} else {
+			log.Println("Webhook mode enabled, but WEBHOOK_URL not set.")
+			log.Println("Set WEBHOOK_URL environment variable or RAILWAY_PUBLIC_DOMAIN (Railway auto-provides this)")
+			log.Println("Or set webhook manually: curl -X POST \"https://api.telegram.org/bot<TOKEN>/setWebhook?url=<YOUR_URL>/webhook\"")
+		}
 	}
 
 	// API endpoints to serve JSON files for Hugo app
