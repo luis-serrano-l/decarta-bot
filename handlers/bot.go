@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"demenu_bot/config"
-	"demenu_bot/services"
-	"demenu_bot/storage"
-	"demenu_bot/utils"
+	"github.com/luis-serrano-l/demenu_bot/config"
+	"github.com/luis-serrano-l/demenu_bot/services"
+	"github.com/luis-serrano-l/demenu_bot/storage"
+	"github.com/luis-serrano-l/demenu_bot/utils"
 	"encoding/json"
 	"fmt"
 	"log"

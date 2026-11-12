@@ -1,7 +1,7 @@
 package services
 
 import (
-	"demenu_bot/config"
+	"github.com/luis-serrano-l/demenu_bot/config"
 	"fmt"
 	"log"
 
