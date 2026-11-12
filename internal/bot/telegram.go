@@ -74,9 +74,14 @@ func (c *Client) Run(ctx context.Context, handle func(context.Context, tgbotapi.
 		c.log.Warn("telegram: could not clear webhook", "err", scrub(err))
 	}
 
+	// The command menu is a convenience; the bot works without it.
+	if _, err := c.api.Request(tgbotapi.NewSetMyCommands(menuCommands()...)); err != nil {
+		c.log.Warn("telegram: could not register the command menu", "err", scrub(err))
+	}
+
 	cfg := tgbotapi.NewUpdate(0)
 	cfg.Timeout = pollTimeoutSeconds
-	cfg.AllowedUpdates = []string{"message", "edited_message"}
+	cfg.AllowedUpdates = []string{"message", "edited_message", "callback_query"}
 	updates := c.api.GetUpdatesChan(cfg)
 	c.log.Info("telegram: polling for updates")
 
@@ -132,15 +137,86 @@ func (c *Client) connect(ctx context.Context) error {
 }
 
 // Send implements Messenger.
-func (c *Client) Send(chatID int64, text string) error {
-	if utf8.RuneCountInString(text) > maxMessageRunes {
-		text = string([]rune(text)[:maxMessageRunes]) + "…"
+func (c *Client) Send(chatID int64, text string, rows ...[]Button) error {
+	msg := tgbotapi.NewMessage(chatID, clipMessage(text))
+	if len(rows) > 0 {
+		msg.ReplyMarkup = keyboard(rows)
 	}
-	msg := tgbotapi.NewMessage(chatID, text)
 	if _, err := c.api.Send(msg); err != nil {
 		return fmt.Errorf("telegram: send message: %w", scrub(err))
 	}
 	return nil
+}
+
+// Edit implements Messenger.
+func (c *Client) Edit(chatID int64, messageID int, text string, rows ...[]Button) error {
+	edit := tgbotapi.NewEditMessageText(chatID, messageID, clipMessage(text))
+	if len(rows) > 0 {
+		markup := keyboard(rows)
+		edit.ReplyMarkup = &markup
+	}
+	// Request, not Send: Send expects a Message back, Request only checks ok.
+	if _, err := c.api.Request(edit); err != nil {
+		return fmt.Errorf("telegram: edit message: %w", scrub(err))
+	}
+	return nil
+}
+
+// SendFile implements Messenger.
+func (c *Client) SendFile(chatID int64, name string, content []byte, caption string) error {
+	doc := tgbotapi.NewDocument(chatID, tgbotapi.FileBytes{Name: name, Bytes: content})
+	doc.Caption = caption
+	if _, err := c.api.Send(doc); err != nil {
+		return fmt.Errorf("telegram: send file: %w", scrub(err))
+	}
+	return nil
+}
+
+// AnswerCallback implements Messenger.
+func (c *Client) AnswerCallback(callbackID, text string) error {
+	if _, err := c.api.Request(tgbotapi.NewCallback(callbackID, text)); err != nil {
+		return fmt.Errorf("telegram: answer callback: %w", scrub(err))
+	}
+	return nil
+}
+
+// Typing implements Messenger.
+func (c *Client) Typing(chatID int64) error {
+	if _, err := c.api.Request(tgbotapi.NewChatAction(chatID, tgbotapi.ChatTyping)); err != nil {
+		return fmt.Errorf("telegram: send chat action: %w", scrub(err))
+	}
+	return nil
+}
+
+func clipMessage(text string) string {
+	if utf8.RuneCountInString(text) > maxMessageRunes {
+		return string([]rune(text)[:maxMessageRunes]) + "…"
+	}
+	return text
+}
+
+func keyboard(rows [][]Button) tgbotapi.InlineKeyboardMarkup {
+	out := make([][]tgbotapi.InlineKeyboardButton, 0, len(rows))
+	for _, row := range rows {
+		line := make([]tgbotapi.InlineKeyboardButton, 0, len(row))
+		for _, b := range row {
+			if b.URL != "" {
+				line = append(line, tgbotapi.NewInlineKeyboardButtonURL(b.Text, b.URL))
+			} else {
+				line = append(line, tgbotapi.NewInlineKeyboardButtonData(b.Text, b.Data))
+			}
+		}
+		out = append(out, line)
+	}
+	return tgbotapi.InlineKeyboardMarkup{InlineKeyboard: out}
+}
+
+func menuCommands() []tgbotapi.BotCommand {
+	out := make([]tgbotapi.BotCommand, len(Commands))
+	for i, c := range Commands {
+		out[i] = tgbotapi.BotCommand{Command: c.Name, Description: c.Description}
+	}
+	return out
 }
 
 // Download implements Messenger.

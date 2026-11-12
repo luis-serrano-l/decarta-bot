@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,6 +36,50 @@ type fakeTelegram struct {
 	files        map[string][]byte // file_path -> content
 	sent         map[int64][]string
 	webhookGone  bool
+
+	nextMsgID  int
+	nextUpdate int
+	queued     []tgbotapi.Update   // delivered by later getUpdates calls
+	autoPress  string              // label of the button to press as soon as it is offered
+	commands   []string            // registered with setMyCommands
+	markups    map[int64][]string  // reply_markup of each message or edit, per chat
+	docs       map[int64][]sentDoc // files sent with sendDocument
+	answered   int                 // answerCallbackQuery calls
+	typing     int                 // sendChatAction calls
+}
+
+type sentDoc struct {
+	name    string
+	content []byte
+	caption string
+}
+
+// record stores a message or an edit and, if it offers the autoPress
+// button, queues the callback a user's tap would produce.
+func (f *fakeTelegram) record(chatID int64, msgID int, text, markup string) {
+	if f.sent == nil {
+		f.sent = map[int64][]string{}
+		f.markups = map[int64][]string{}
+	}
+	f.sent[chatID] = append(f.sent[chatID], text)
+	f.markups[chatID] = append(f.markups[chatID], markup)
+
+	var kb tgbotapi.InlineKeyboardMarkup
+	if markup == "" || json.Unmarshal([]byte(markup), &kb) != nil {
+		return
+	}
+	for _, row := range kb.InlineKeyboard {
+		for _, b := range row {
+			if b.Text != f.autoPress || b.CallbackData == nil {
+				continue
+			}
+			f.nextUpdate++
+			f.queued = append(f.queued, tgbotapi.Update{
+				UpdateID:      1000 + f.nextUpdate,
+				CallbackQuery: callbackUpdate(chatID, msgID, fmt.Sprintf("cb-%d", f.nextUpdate), *b.CallbackData).CallbackQuery,
+			})
+		}
+	}
 }
 
 func (f *fakeTelegram) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -56,8 +101,16 @@ func (f *fakeTelegram) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if err := r.ParseForm(); err != nil {
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/") {
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			f.t.Errorf("bad multipart form: %v", err)
+		}
+	} else if err := r.ParseForm(); err != nil {
 		f.t.Errorf("bad form: %v", err)
+	}
+	chatID, _ := strconv.ParseInt(r.Form.Get("chat_id"), 10, 64)
+	message := func(id int) map[string]any {
+		return map[string]any{"message_id": id, "chat": map[string]any{"id": chatID, "type": "private"}}
 	}
 
 	switch method {
@@ -76,6 +129,9 @@ func (f *fakeTelegram) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		pending := f.updates
 		f.updates = nil
 		if pending == nil {
+			pending, f.queued = f.queued, nil
+		}
+		if pending == nil {
 			pending = []tgbotapi.Update{}
 			// Emulate (a very short) long poll so the client does not spin.
 			f.mu.Unlock()
@@ -84,12 +140,46 @@ func (f *fakeTelegram) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		f.ok(w, pending)
 	case "sendMessage":
-		chatID, _ := strconv.ParseInt(r.Form.Get("chat_id"), 10, 64)
-		if f.sent == nil {
-			f.sent = map[int64][]string{}
+		f.nextMsgID++
+		f.record(chatID, f.nextMsgID, r.Form.Get("text"), r.Form.Get("reply_markup"))
+		f.ok(w, message(f.nextMsgID))
+	case "editMessageText":
+		msgID, _ := strconv.Atoi(r.Form.Get("message_id"))
+		f.record(chatID, msgID, r.Form.Get("text"), r.Form.Get("reply_markup"))
+		f.ok(w, message(msgID))
+	case "sendDocument":
+		file, header, err := r.FormFile("document")
+		if err != nil {
+			f.t.Errorf("sendDocument without a document: %v", err)
+			http.Error(w, "no document", http.StatusBadRequest)
+			return
 		}
-		f.sent[chatID] = append(f.sent[chatID], r.Form.Get("text"))
-		f.ok(w, map[string]any{"message_id": 1, "chat": map[string]any{"id": chatID, "type": "private"}})
+		content, _ := io.ReadAll(file)
+		if f.docs == nil {
+			f.docs = map[int64][]sentDoc{}
+		}
+		f.docs[chatID] = append(f.docs[chatID], sentDoc{header.Filename, content, r.Form.Get("caption")})
+		f.nextMsgID++
+		f.ok(w, message(f.nextMsgID))
+	case "setMyCommands":
+		var cmds []tgbotapi.BotCommand
+		if err := json.Unmarshal([]byte(r.Form.Get("commands")), &cmds); err != nil {
+			f.t.Errorf("setMyCommands: bad commands %q: %v", r.Form.Get("commands"), err)
+		}
+		f.commands = nil
+		for _, c := range cmds {
+			f.commands = append(f.commands, c.Command)
+		}
+		f.ok(w, true)
+	case "answerCallbackQuery":
+		f.answered++
+		f.ok(w, true)
+	case "sendChatAction":
+		if r.Form.Get("action") != "typing" {
+			f.t.Errorf("sendChatAction: action = %q, want typing", r.Form.Get("action"))
+		}
+		f.typing++
+		f.ok(w, true)
 	case "getFile":
 		path := r.Form.Get("file_id") + ".json"
 		f.ok(w, map[string]any{"file_id": r.Form.Get("file_id"), "file_size": len(f.files[path]), "file_path": path})
@@ -133,17 +223,22 @@ func (s *syncBuffer) String() string {
 }
 
 // TestEndToEnd drives the whole path with only the network edges faked:
-// Telegram long poll -> handler -> validation -> rate limit -> publisher ->
-// reply. The first getMe is rejected to exercise the reconnect loop.
+// Telegram long poll -> handler -> validation -> preview -> Publish button
+// -> rate limit -> publisher -> reply. The fake presses Publish as soon as
+// it is offered. The first getMe calls are rejected to exercise the
+// reconnect loop.
 func TestEndToEnd(t *testing.T) {
 	tg := &fakeTelegram{
 		t:            t,
 		authFailures: 2,
+		autoPress:    "Publish",
 		files:        map[string][]byte{"doc-1.json": []byte(validJSON)},
 		updates: []tgbotapi.Update{
 			{UpdateID: 1, Message: textUpdate(adminID, validList).Message},
 			{UpdateID: 2, Message: docUpdate(allowedID, "doc-1", len(validJSON)).Message},
 			{UpdateID: 3, Message: textUpdate(strangerID, validList).Message},
+			{UpdateID: 4, Message: textUpdate(strangerID, "/start").Message},
+			{UpdateID: 5, Message: textUpdate(templateUserID, "/template").Message},
 		},
 	}
 	srv := httptest.NewServer(tg)
@@ -159,7 +254,7 @@ func TestEndToEnd(t *testing.T) {
 	client := NewClient(fakeToken, srv.URL, logger)
 	client.backoff = time.Millisecond
 	handler := NewHandler(
-		Options{SiteBaseURL: siteURL, AllowedUserIDs: []int64{allowedID}, AdminUserIDs: []int64{adminID}, MaxUploadBytes: 1024},
+		Options{SiteBaseURL: siteURL, AllowedUserIDs: []int64{allowedID, templateUserID}, AdminUserIDs: []int64{adminID}, MaxUploadBytes: 1024},
 		ids, pub, &memStore{},
 		ratelimit.New(5, time.Hour, nil), ratelimit.New(1, time.Hour, nil),
 		client, logger,
@@ -172,8 +267,13 @@ func TestEndToEnd(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { done <- client.Run(ctx, handler.Handle) }()
 
-	waitFor(t, "all three users to get a reply", func() bool {
-		return tg.lastSent(adminID) != "" && tg.lastSent(allowedID) != "" && tg.lastSent(strangerID) != ""
+	waitFor(t, "both menus to be published and every user to get a reply", func() bool {
+		tg.mu.Lock()
+		docs, stranger := len(tg.docs[templateUserID]), len(tg.sent[strangerID])
+		tg.mu.Unlock()
+		return strings.Contains(tg.lastSent(adminID), "Menu published") &&
+			strings.Contains(tg.lastSent(allowedID), "Menu published") &&
+			stranger == 2 && docs == 1
 	})
 	cancel()
 	select {
@@ -204,8 +304,32 @@ func TestEndToEnd(t *testing.T) {
 	if _, ok := pub.Get(ids.ID(strangerID)); ok {
 		t.Error("an unauthorised user's menu was published")
 	}
-	if got := tg.lastSent(strangerID); !strings.Contains(got, "not authorised") {
-		t.Errorf("stranger reply = %q", got)
+
+	tg.mu.Lock()
+	defer tg.mu.Unlock()
+	if got := strings.Join(tg.sent[strangerID], "\n"); !strings.Contains(got, "not authorised") {
+		t.Errorf("stranger replies = %q", got)
+	}
+	if want := []string{"start", "help", "template", "link", "status", "delete"}; !slices.Equal(tg.commands, want) {
+		t.Errorf("registered commands = %q, want %q", tg.commands, want)
+	}
+	// Over the wire: /start carries its two callback buttons, the final
+	// message a URL button, and the template arrives as a file.
+	if got := strings.Join(tg.markups[strangerID], ""); !strings.Contains(got, `"callback_data":"template"`) || !strings.Contains(got, `"callback_data":"how"`) {
+		t.Errorf("/start buttons = %s", got)
+	}
+	markups := tg.markups[adminID]
+	if want := `"url":"` + siteURL + "/menu/" + ids.ID(adminID) + `"`; !strings.Contains(markups[len(markups)-1], want) {
+		t.Errorf("final markup %s does not contain %s", markups[len(markups)-1], want)
+	}
+	if doc := tg.docs[templateUserID][0]; doc.name != "menu.json" || !bytes.Equal(doc.content, templateJSON) || doc.caption == "" {
+		t.Errorf("template document = %q, %d bytes, caption %q", doc.name, len(doc.content), doc.caption)
+	}
+	if tg.answered != 2 {
+		t.Errorf("answered %d callbacks, want 2", tg.answered)
+	}
+	if tg.typing < 4 {
+		t.Errorf("typing shown %d times, want at least once per check and per publish", tg.typing)
 	}
 
 	out := logs.String()
