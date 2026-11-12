@@ -1,30 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t d">
   <title id="t">Demenu logo</title>
-  <desc id="d">A hand-drawn, retro style badge of a man turned to the left, happily biting into a taco.</desc>
+  <desc id="d">A retro badge of a man at a gingham-covered table, happily biting into a warm, home-made taco.</desc>
   <defs>
     <clipPath id="badge"><circle cx="256" cy="256" r="232"/></clipPath>
-    <!-- wobbly, hand-inked edges -->
+    <!-- a slight hand-inked wobble -->
     <filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
-      <feTurbulence type="fractalNoise" baseFrequency=".03" numOctaves="2" seed="7"/>
-      <feDisplacementMap in="SourceGraphic" scale="9"/>
+      <feTurbulence type="fractalNoise" baseFrequency=".02" numOctaves="2" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="3"/>
     </filter>
     <!-- paper grain -->
     <filter id="grain">
       <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3"/>
-      <feColorMatrix values="0 0 0 0 .17  0 0 0 0 .13  0 0 0 0 .09  0 0 0 -1.1 .62"/>
+      <feColorMatrix values="0 0 0 0 .17  0 0 0 0 .13  0 0 0 0 .09  0 0 0 -1.1 .6"/>
     </filter>
-
-    <!-- shapes, drawn twice below: once as flat colour, once as ink line -->
-    <path id="shirt" d="M168 520C170 400 240 350 320 350s152 50 152 170Z"/>
-    <path id="neck" d="M288 292h60v46a30 30 0 0 1-60 0Z"/>
-    <circle id="ear" cx="384" cy="240" r="18"/>
-    <path id="head" d="M300 126c56 0 94 42 94 96s-40 94-94 94c-46 0-80-26-90-62-12 0-22-8-22-18s8-18 20-18c6-52 42-92 92-92Z"/>
-    <path id="hair" d="M208 204c-2-62 44-98 98-98 60 0 100 48 96 112-4 14-8 22-12 26-4-22-14-38-30-46-16-28-44-40-74-38-30 2-56 14-78 44Z"/>
-    <path id="mouth" d="M218 256c16 8 38 6 54-6 6 30-6 52-26 54s-32-18-28-48Z"/>
-    <path id="shell" d="M-70 0A70 70 0 0 0 70 0Z"/>
-    <path id="lettuce" d="M-62 0c-6-16 6-26 18-20 2-16 22-20 30-8 8-14 30-12 34 2 12-10 30-2 28 12 10 0 14 8 12 14Z"/>
-    <path id="arm" d="M330 424C306 396 266 368 216 340"/>
-    <path id="hand" d="M158 330c-4-14 4-26 18-30l34-10c14-4 26 4 28 16s-4 22-18 26l-34 10c-14 4-24-2-28-12Z"/>
+    <!-- gingham tablecloth -->
+    <pattern id="gingham" width="36" height="36" patternUnits="userSpaceOnUse" patternTransform="translate(4 418)">
+      <rect width="36" height="36" fill="#F6EAD0"/>
+      <rect width="18" height="36" fill="#B9442B" opacity=".5"/>
+      <rect width="36" height="18" fill="#B9442B" opacity=".5"/>
+    </pattern>
+    <path id="arm" d="M372 452C340 404 290 366 226 338"/>
   </defs>
 
   <!-- badge -->
@@ -37,57 +32,63 @@
       <path d="M256 256L-40 250v90Z"/><path d="M256 256L-40 430v90Z"/><path d="M256 256L560 430v90Z"/>
     </g>
 
-    <g filter="url(#ink)" stroke-linejoin="round" stroke-linecap="round">
-      <!-- flat colour, printed slightly off register -->
-      <g transform="translate(6 5)">
-        <use href="#shirt" fill="#2C6E68"/>
-        <use href="#neck" fill="#D69A6A"/>
-        <use href="#ear" fill="#E8B181"/>
-        <use href="#head" fill="#E8B181"/>
-        <use href="#hair" fill="#3A2A1E"/>
-        <circle cx="306" cy="258" r="16" fill="#D9694A" opacity=".75"/>
-        <use href="#mouth" fill="#7A2A1E"/>
-        <use href="#arm" fill="none" stroke="#2C6E68" stroke-width="46"/>
-      </g>
+    <g filter="url(#ink)" stroke="#2B2118" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+      <!-- body -->
+      <path d="M182 520C184 404 248 352 322 352s146 52 148 168Z" fill="#2C6E68"/>
+      <path d="M290 296h58v52a29 29 0 0 1-58 0Z" fill="#D69A6A"/>
 
-      <!-- ink line -->
-      <g fill="none" stroke="#2B2118" stroke-width="7">
-        <use href="#shirt"/>
-        <path d="M290 352l32 30 30-30"/>
-        <path d="M288 320v28M348 314v34"/>
-        <use href="#head"/>
-        <path d="M378 232c8-4 16 2 14 12"/>
-        <!-- eyes on the taco, squeezed happy by the cheeks -->
-        <path d="M228 190q14-10 26-2"/>
-        <path d="M280 186q14-8 28 2"/>
-        <path d="M232 222q10-12 22 0" stroke-width="8"/>
-        <path d="M282 220q12-12 24 0" stroke-width="8"/>
-        <use href="#mouth"/>
-        <path d="M270 252q12-2 16-14"/>
-        <use href="#arm" stroke-width="58"/>
+      <!-- head, turned to the left -->
+      <circle cx="392" cy="238" r="17" fill="#E8B181"/>
+      <circle cx="304" cy="214" r="92" fill="#E8B181"/>
+      <path d="M218 218c-16 2-22 16-14 26 6 8 16 8 22 4" fill="#E8B181"/>
+      <path d="M388 232c6-2 10 2 9 8" fill="none" stroke-width="4"/>
+      <path d="M220 180C226 132 262 112 306 114c58 2 100 44 96 104-2 18-6 32-12 44-4-18-10-34-22-46-12-24-36-40-66-42-32-2-58 6-82 6Z" fill="#3A2A1E"/>
+
+      <!-- eyes on the taco, squeezed happy by the cheeks -->
+      <g fill="none">
+        <path d="M236 192q12-9 24-2" stroke-width="5"/>
+        <path d="M286 188q13-8 26 1" stroke-width="5"/>
+        <path d="M238 224q11-13 22 0" stroke-width="7"/>
+        <path d="M288 222q12-13 24 0" stroke-width="7"/>
       </g>
+      <circle cx="314" cy="256" r="16" fill="#D9694A" opacity=".75" stroke="none"/>
+
+      <!-- mouth open around the taco -->
+      <path d="M228 252q26 12 52-4 4 46-24 52-30 4-28-48Z" fill="#7A2A1E"/>
+      <path d="M236 258q20 6 38-3l1 10q-20 8-38 2Z" fill="#FFF8E8" stroke="none"/>
+      <path d="M278 250q10-3 13-14" fill="none"/>
+
+      <!-- arm -->
+      <use href="#arm" fill="none" stroke-width="56"/>
       <use href="#arm" fill="none" stroke="#2C6E68" stroke-width="44"/>
 
       <!-- the taco -->
-      <g transform="translate(176 288) rotate(-20)">
-        <g transform="translate(6 5)">
-          <use href="#lettuce" fill="#7F9A3A"/>
-          <circle cx="-34" cy="-8" r="9" fill="#B9442B"/><circle cx="14" cy="-12" r="10" fill="#B9442B"/>
-          <circle cx="-10" cy="-8" r="8" fill="#6E4326"/><circle cx="38" cy="-4" r="8" fill="#6E4326"/>
-        </g>
-        <g fill="none" stroke="#2B2118" stroke-width="7">
-          <use href="#lettuce"/>
-          <use href="#shell" fill="#E2A52E"/>
-          <path d="M-36 24h2M-6 42h2M24 22h2M0 14h2" stroke-width="6"/>
-        </g>
+      <g transform="translate(176 290) rotate(-18)">
+        <path d="M-60 2c-8-16 4-28 18-22 2-16 24-20 32-6 8-14 30-12 34 2 12-10 30-2 28 12 10 2 12 10 8 16Z" fill="#7F9A3A"/>
+        <circle cx="-32" cy="-6" r="10" fill="#B9442B" stroke-width="4"/>
+        <circle cx="16" cy="-10" r="11" fill="#B9442B" stroke-width="4"/>
+        <circle cx="-8" cy="-4" r="9" fill="#6E4326" stroke-width="4"/>
+        <circle cx="40" cy="-2" r="9" fill="#6E4326" stroke-width="4"/>
+        <path d="M-72 0A72 72 0 0 0 72 0Z" fill="#E2A52E"/>
+        <path d="M-52 12A54 54 0 0 0 -8 52" fill="none" stroke="#F4CE74" stroke-width="5"/>
+        <path d="M-20 18h1M10 30h1M34 14h1M-2 46h1" fill="none" stroke="#B9791A" stroke-width="5"/>
       </g>
-      <use href="#hand" fill="#E8B181" stroke="#2B2118" stroke-width="7"/>
-      <path d="M186 304l8 22M206 298l8 22" fill="none" stroke="#2B2118" stroke-width="5"/>
 
-      <!-- yum marks -->
-      <path d="M150 196l-22-16M168 170l-10-26M132 228l-28-4" fill="none" stroke="#B9442B" stroke-width="7"/>
+      <!-- hand around the shell -->
+      <path d="M176 338c-6-16 2-30 16-34l40-12c12-4 22 2 26 12s-2 22-14 26l-40 14c-12 4-24 2-28-6Z" fill="#E8B181"/>
+      <path d="M202 304l8 24M222 298l8 24" fill="none" stroke-width="4"/>
+
+      <!-- steam: it is still warm -->
+      <g fill="none" stroke="#B9442B" stroke-width="6">
+        <path d="M112 216c-12-12 10-22-2-36s8-20 0-32"/>
+        <path d="M146 200c-12-12 10-22-2-36s8-20 0-32"/>
+        <path d="M180 196c-10-10 8-18-2-30s6-16 0-26"/>
+      </g>
+
+      <!-- table -->
+      <rect x="0" y="418" width="512" height="100" fill="url(#gingham)"/>
     </g>
-    <rect width="512" height="512" filter="url(#grain)" opacity=".5"/>
+    <rect width="512" height="512" filter="url(#grain)" opacity=".45"/>
   </g>
   <circle cx="256" cy="256" r="232" fill="none" stroke="#2B2118" stroke-width="6"/>
 </svg>
