@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -196,6 +197,7 @@ func healthHandler(connected func() bool) http.Handler {
 // curl, so the binary checks itself.
 func probe(port string) int {
 	n := config.DefaultPort
+	port = strings.TrimSpace(port) // as config.Load does
 	if port != "" {
 		var err error
 		if n, err = strconv.Atoi(port); err != nil || n < 1 || n > 65535 {
