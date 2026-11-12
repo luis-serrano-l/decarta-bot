@@ -44,6 +44,7 @@ These are not configurable:
 |---|---|
 | Update delivery | Long polling; any webhook left on the bot is cleared at startup |
 | Time a preview or delete confirmation waits for its button | 15 minutes |
+| Menus checked and previewed (uploads) | 20 per user per 10 minutes |
 | `/request_access` notifications | 1 per user per hour |
 | Problems listed in one validation reply | 5 |
 | Timeout of a publish or delete | 45 seconds |

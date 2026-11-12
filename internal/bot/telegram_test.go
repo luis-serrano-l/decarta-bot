@@ -256,7 +256,7 @@ func TestEndToEnd(t *testing.T) {
 	handler := NewHandler(
 		Options{SiteBaseURL: siteURL, AllowedUserIDs: []int64{allowedID, templateUserID}, AdminUserIDs: []int64{adminID}, MaxUploadBytes: 1024},
 		ids, pub, &memStore{},
-		ratelimit.New(5, time.Hour, nil), ratelimit.New(1, time.Hour, nil),
+		ratelimit.New(5, time.Hour, nil), ratelimit.New(20, time.Minute, nil), ratelimit.New(1, time.Hour, nil),
 		client, logger,
 	)
 

@@ -126,6 +126,7 @@ type Handler struct {
 	pub          publisher.Publisher
 	store        store.Store
 	publishLimit *ratelimit.Limiter
+	uploadLimit  *ratelimit.Limiter
 	requestLimit *ratelimit.Limiter
 	tg           Messenger
 	log          *slog.Logger
@@ -145,13 +146,15 @@ type pending struct {
 	expires time.Time
 }
 
-// NewHandler wires a Handler. publishLimit bounds publishes per user;
-// requestLimit bounds /request_access notifications per user.
+// NewHandler wires a Handler. publishLimit bounds publishes per user,
+// uploadLimit bounds the (cheaper, more frequent) menu submissions that
+// are checked and previewed, and requestLimit bounds /request_access
+// notifications.
 func NewHandler(opts Options, ids *menuid.Generator, pub publisher.Publisher, st store.Store,
-	publishLimit, requestLimit *ratelimit.Limiter, tg Messenger, log *slog.Logger) *Handler {
+	publishLimit, uploadLimit, requestLimit *ratelimit.Limiter, tg Messenger, log *slog.Logger) *Handler {
 	return &Handler{
 		opts: opts, ids: ids, pub: pub, store: st,
-		publishLimit: publishLimit, requestLimit: requestLimit,
+		publishLimit: publishLimit, uploadLimit: uploadLimit, requestLimit: requestLimit,
 		tg: tg, log: log,
 		now:     time.Now,
 		pending: make(map[string]*pending),
@@ -359,6 +362,14 @@ func (h *Handler) submit(ctx context.Context, u user, msg *tgbotapi.Message) {
 	}
 	if msg.Document == nil && !looksLikeMenu(msg.Text) {
 		h.reply(u, "🤔 That does not look like a menu.\n\nSend a .json file, or paste the menu as text. /template gives you an example to start from.")
+		return
+	}
+	// Checked before anything is downloaded or parsed. Looser than the
+	// publish limit: fixing a typo and sending again is the normal case.
+	if ok, retry := h.uploadLimit.Allow(u.id); !ok {
+		h.log.Warn("upload rate limit reached", "id", u.id)
+		h.reply(u, "⏳ You have sent a lot of menus in a short time, so I need you to wait a little.\n\n"+
+			"You can send another in "+humanDuration(retry)+". Nothing was changed.")
 		return
 	}
 

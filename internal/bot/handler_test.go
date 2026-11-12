@@ -32,6 +32,9 @@ const (
 	// of its own.
 	templateUserID int64 = 1000000004
 
+	// testUploadLimit is the fixture's cap on submissions per 10 minutes.
+	testUploadLimit = 20
+
 	validList = "CATEGORY: Starters\n- ITEM: Soup\n  PRICE: 4.50\n"
 	validJSON = `{"categories":[{"id":"starters","name":"Starters","items":[{"name":"Soup","price":4.5}]}]}`
 )
@@ -257,6 +260,7 @@ func newFixture(t *testing.T) *fixture {
 		},
 		ids, f.pub, f.st,
 		ratelimit.New(2, time.Hour, clock),
+		ratelimit.New(testUploadLimit, 10*time.Minute, clock),
 		ratelimit.New(1, time.Hour, clock),
 		f.tg,
 		slog.New(slog.NewTextHandler(f.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
@@ -732,6 +736,53 @@ func TestPublishRateLimit(t *testing.T) {
 	}
 	if content, _ := f.pub.Get(id); !strings.Contains(string(content), "Stew") {
 		t.Errorf("published %s, want the menu that was waiting", content)
+	}
+	assertNoRawIDs(t, f.logs.String())
+}
+
+func TestUploadRateLimit(t *testing.T) {
+	f := newFixture(t)
+	f.tg.files["doc"] = []byte(validJSON)
+
+	// Chat and commands are not uploads; valid and invalid menus both are.
+	for i := 0; i < testUploadLimit; i++ {
+		f.send(allowedID, "hello bot")
+		f.send(allowedID, "/status")
+		if i%2 == 0 {
+			f.send(allowedID, validList)
+		} else {
+			f.send(allowedID, "CATEGORY: A\nnot a menu")
+		}
+	}
+	if _, _, ok := f.tg.button(allowedID, "Publish"); !ok {
+		t.Fatal("uploads within the limit were not previewed")
+	}
+	downloads, typing := f.tg.downloads, f.tg.typing[allowedID]
+
+	// One more is refused before it is downloaded or parsed, with the wait.
+	f.h.Handle(context.Background(), docUpdate(allowedID, "doc", len(validJSON)))
+	got := f.tg.lastMsg(allowedID)
+	if !strings.HasPrefix(got.text, "⏳") || !strings.Contains(got.text, "send another in 10 minutes") || len(got.rows) != 0 {
+		t.Errorf("reply = %q with buttons %q, want a friendly limit message with the wait", got.text, labels(got))
+	}
+	if f.tg.downloads != downloads || f.tg.typing[allowedID] != typing {
+		t.Error("a rate-limited upload was still downloaded or checked")
+	}
+
+	// The preview already shown can still be published, other users are
+	// unaffected, and the window slides.
+	f.press(allowedID, "Publish")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Menu published") {
+		t.Errorf("publishing the earlier preview: reply = %q", got)
+	}
+	f.send(adminID, validList)
+	if _, _, ok := f.tg.button(adminID, "Publish"); !ok {
+		t.Errorf("another user was limited: %q", f.tg.last(adminID))
+	}
+	f.now = f.now.Add(10*time.Minute + time.Second)
+	f.send(allowedID, validList)
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Publish it?") {
+		t.Errorf("after the window: reply = %q", got)
 	}
 	assertNoRawIDs(t, f.logs.String())
 }

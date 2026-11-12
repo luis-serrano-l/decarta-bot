@@ -22,7 +22,7 @@ docker compose up --build --wait    # container (needs .env), waits for HEALTHCH
 3. `internal/bot` long-polls Telegram (the only mode) and handles commands, menu submissions and inline buttons; a menu is previewed and published only after the user taps Publish.
 4. `internal/menu` parses the list or JSON format into typed structs and validates them strictly.
 5. `internal/menuid` derives the public id: base62 of a truncated HMAC-SHA256(HASH_SECRET, userID); not reversible.
-6. `internal/ratelimit` is an in-memory sliding window (default 5 publishes per user per hour).
+6. `internal/ratelimit` is an in-memory sliding window (default 5 publishes per user per hour; uploads have a fixed, looser limit of 20 per 10 minutes).
 7. `internal/publisher` is the `Publisher` interface; `GitHub` commits (or deletes) `static/menus/<id>.json` via the Contents API, `Fake` is for tests.
 8. `internal/store` keeps the last published copy per id on the data volume (`STORAGE_PATH`).
 9. `internal/redact` scrubs secrets from all log output; user IDs are logged only as the HMAC id.

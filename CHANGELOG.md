@@ -29,6 +29,8 @@ fresh `.env.example`.
 - Validation reports every problem with its exact field path and a fix,
   at most five per message.
 - The list format accepts its keywords in any letter case.
+- Upload rate limit: 20 menus checked per user per 10 minutes, separate
+  from the publish limit.
 - Documentation organised by Diátaxis under `docs/`: a tutorial, how-to
   guides, reference (including a JSON Schema) and explanation (design and
   threat model). `CONTRIBUTING.md`.
@@ -42,7 +44,7 @@ fresh `.env.example`.
 
 - Sending a menu no longer publishes it immediately; see the preview
   above. The publish rate limit is counted at confirmation, so previews
-  and rejected menus are free, and the reply says when to retry.
+  and rejected menus do not use it up, and the reply says when to retry.
 - `/status` and `/myid` are available to everyone (previously
   administrators only). `/status` reports the caller's access and menu.
 - Ordinary chat messages get a hint instead of a list of syntax errors.

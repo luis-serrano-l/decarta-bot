@@ -68,9 +68,13 @@ Rules that apply to **Publish**, **Yes, delete it** and **Cancel**:
 ## Rate limit
 
 Each user may publish `PUBLISH_RATE_LIMIT` times per `PUBLISH_RATE_WINDOW`
-(5 per hour by default). Only a tap on **Publish** counts: previews,
-rejected menus, cancels and deletes are free.
+(5 per hour by default). Only a tap on **Publish** counts towards it:
+previews, rejected menus, cancels and deletes do not.
 
-At the limit the bot says how long to wait ("You can publish again in 12
+Uploads have their own, looser limit: 20 menus checked per user per 10
+minutes, valid or not. It is not configurable. Past it the bot says when
+you can send another; a preview already on screen can still be published.
+
+At the publish limit the bot says how long to wait ("You can publish again in 12
 minutes") and keeps the preview until then, so the same **Publish** button
 works once the wait is over.

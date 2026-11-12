@@ -87,6 +87,9 @@ size, not that a dish name is harmless HTML.
 
 ### Abuse and denial of service
 
+- Uploads are limited per user (20 per 10 minutes), checked before
+  anything is downloaded or parsed, so previews cannot be used to keep
+  the bot busy.
 - Publishes are limited per user (5 per hour by default) and
   `/request_access` notifications to once per user per hour, so a user
   cannot flood the repository with commits or the administrators with

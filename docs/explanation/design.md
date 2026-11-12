@@ -68,8 +68,10 @@ once, only for its user, and never for a superseded preview. Keeping it in
 memory means a restart forgets it; the user sends the menu again. That is
 a deliberate trade against adding a database for a 15-minute value.
 
-The rate limit is charged at **Publish**, not at upload. Fixing typos and
-looking at previews is free; only commits to the site are metered.
+There are two rate limits. The publish limit is charged at **Publish**,
+not at upload, because commits to the site are what it meters. A second,
+much looser limit covers uploads, so that fixing typos and looking at
+previews stays effectively free while a flood of submissions does not.
 
 ## Errors written for the person who has to fix them
 

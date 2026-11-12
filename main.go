@@ -32,7 +32,12 @@ import (
 const (
 	// accessRequestsPerHour bounds how often one user can ping the admins.
 	accessRequestsPerHour = 1
-	shutdownGrace         = 10 * time.Second
+	// uploadsPerWindow bounds how many menus one user can have checked and
+	// previewed. It is deliberately looser than the publish limit, which
+	// meters commits: correcting a menu and sending it again is normal.
+	uploadsPerWindow = 20
+	uploadWindow     = 10 * time.Minute
+	shutdownGrace    = 10 * time.Second
 )
 
 func main() {
@@ -100,6 +105,7 @@ func serve(cfg *config.Config, logger *slog.Logger) error {
 		},
 		ids, pub, st,
 		ratelimit.New(cfg.PublishLimit, cfg.PublishWindow, nil),
+		ratelimit.New(uploadsPerWindow, uploadWindow, nil),
 		ratelimit.New(accessRequestsPerHour, time.Hour, nil),
 		client, logger,
 	)
