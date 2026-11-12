@@ -38,7 +38,8 @@ var (
 )
 
 // GitHub publishes menus as static/menus/<id>.json in a repository through
-// the Contents API. Each publish is one commit on the configured branch.
+// the Contents API. Each publish or delete is one commit on the configured
+// branch.
 //
 // The token needs only "Contents: read and write" on that single repository
 // (a fine-grained personal access token); it is sent in the Authorization
@@ -110,6 +111,43 @@ func (g *GitHub) Publish(ctx context.Context, id string, content []byte) error {
 		err = g.put(ctx, endpoint, id, sha, content)
 		// 409 means the branch moved between our read and write (for
 		// example two publishes racing); re-read the sha and try once more.
+		var se *statusError
+		if !errors.As(err, &se) || se.code != http.StatusConflict {
+			return err
+		}
+	}
+	return err
+}
+
+// Delete removes static/menus/<id>.json in one commit. It returns
+// ErrNotFound if the file does not exist.
+func (g *GitHub) Delete(ctx context.Context, id string) error {
+	if !menuid.Valid(id) {
+		return ErrInvalidID
+	}
+	endpoint := fmt.Sprintf("%s/repos/%s/contents/%s/%s.json", g.api, g.repo, MenuDir, id)
+
+	var err error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		var sha string
+		sha, err = g.currentSHA(ctx, endpoint)
+		if err != nil {
+			return err
+		}
+		if sha == "" {
+			return ErrNotFound
+		}
+		var payload []byte
+		payload, err = json.Marshal(struct {
+			Message string `json:"message"`
+			Branch  string `json:"branch"`
+			SHA     string `json:"sha"`
+		}{Message: "menu: delete " + id, Branch: g.branch, SHA: sha})
+		if err != nil {
+			return fmt.Errorf("github: encode request: %w", err)
+		}
+		_, err = g.do(ctx, http.MethodDelete, endpoint, payload)
+		// As in Publish: a 409 means the branch moved; re-read and retry once.
 		var se *statusError
 		if !errors.As(err, &se) || se.code != http.StatusConflict {
 			return err

@@ -96,6 +96,13 @@ func (s *memStore) Save(id string, content []byte) error {
 	return nil
 }
 
+func (s *memStore) Delete(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.saved, id)
+	return nil
+}
+
 func (s *memStore) Has(id string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
