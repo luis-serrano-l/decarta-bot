@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t d">
   <title id="t">Demenu logo</title>
-  <desc id="d">A happy man with closed eyes and a big smile, holding a taco in each hand.</desc>
+  <desc id="d">A man turned to the left, delighted as he lifts a taco to his open mouth from a plate of tacos.</desc>
   <defs>
     <clipPath id="badge"><circle cx="256" cy="256" r="240"/></clipPath>
     <g id="taco">
@@ -23,43 +23,47 @@
   <circle cx="256" cy="256" r="240" fill="#2EC4B6"/>
   <g clip-path="url(#badge)">
     <!-- shirt and neck -->
-    <path d="M96 520C96 400 170 352 256 352s160 48 160 168Z" fill="#E4572E"/>
-    <path d="M222 300h68v62a34 34 0 0 1-68 0Z" fill="#E3A476"/>
-    <path d="M214 356l42 40 42-40 14 12-56 56-56-56Z" fill="#FFF4E0"/>
+    <path d="M176 520C176 398 244 346 322 346s150 52 150 174Z" fill="#E4572E"/>
+    <path d="M286 296h62v44a31 31 0 0 1-62 0Z" fill="#E3A476"/>
 
-    <g transform="translate(0 30)">
-    <!-- head -->
-    <circle cx="160" cy="232" r="20" fill="#F4B98B"/>
-    <circle cx="352" cy="232" r="20" fill="#F4B98B"/>
-    <circle cx="256" cy="220" r="100" fill="#F4B98B"/>
-    <!-- hair -->
-    <path d="M156 214C150 138 200 102 262 104c62 2 104 42 96 110-14-34-40-54-72-58-40-6-92 6-130 58Z" fill="#3B2A20"/>
+    <!-- head, turned to the left -->
+    <circle cx="388" cy="236" r="19" fill="#F4B98B"/>
+    <circle cx="300" cy="216" r="96" fill="#F4B98B"/>
+    <ellipse cx="207" cy="236" rx="15" ry="12" fill="#F4B98B"/>
+    <!-- hair, swept to the back -->
+    <path d="M210 196C210 132 262 104 318 110c62 6 96 58 82 132-8-22-20-36-38-44-14-28-44-40-76-38-30 2-54 12-76 36Z" fill="#3B2A20"/>
 
-    <!-- happy closed eyes -->
-    <g fill="none" stroke="#3B2A20" stroke-width="9" stroke-linecap="round">
-      <path d="M198 222q20-24 40 0"/>
-      <path d="M274 222q20-24 40 0"/>
+    <!-- eyes fixed on the taco -->
+    <g fill="none" stroke="#3B2A20" stroke-width="8" stroke-linecap="round">
+      <path d="M228 184q14-10 28-4"/>
+      <path d="M280 180q16-10 30 0"/>
     </g>
-    <!-- cheeks -->
-    <circle cx="196" cy="254" r="17" fill="#F28B78" opacity=".7"/>
-    <circle cx="316" cy="254" r="17" fill="#F28B78" opacity=".7"/>
-    <!-- big smile -->
-    <path d="M212 256h88a44 44 0 0 1-88 0Z" fill="#3B2A20"/>
-    <path d="M220 256h72v10a6 6 0 0 1-6 6h-60a6 6 0 0 1-6-6Z" fill="#FFF"/>
-    <path d="M234 289a26 20 0 0 1 44 0 44 44 0 0 1-44 0Z" fill="#F0606B"/>
-    <!-- moustache -->
-    <path d="M256 240c-14-12-40-10-52 8 18-4 36 2 52 4 16-2 34-8 52-4-12-18-38-20-52-8Z" fill="#3B2A20"/>
+    <circle cx="244" cy="212" r="17" fill="#FFF"/>
+    <circle cx="296" cy="210" r="17" fill="#FFF"/>
+    <circle cx="237" cy="213" r="8.5" fill="#3B2A20"/>
+    <circle cx="289" cy="211" r="8.5" fill="#3B2A20"/>
+    <circle cx="234.500" cy="210" r="2.800" fill="#FFF"/>
+    <circle cx="286.500" cy="208" r="2.800" fill="#FFF"/>
+    <circle cx="246" cy="240" r="19" fill="#F4B98B"/>
+    <circle cx="298" cy="238" r="19" fill="#F4B98B"/>
+    <!-- cheek -->
+    <circle cx="304" cy="256" r="17" fill="#F28B78" opacity=".7"/>
+    <!-- mouth wide open for the bite -->
+    <ellipse cx="244" cy="268" rx="27" ry="24" fill="#3B2A20"/>
+    <path d="M221 258a27 24 0 0 1 46 0Z" fill="#FFF"/>
+    <ellipse cx="248" cy="283" rx="15" ry="8" fill="#F0606B"/>
+    <path d="M268 262q12-2 16-14" fill="none" stroke="#3B2A20" stroke-width="7" stroke-linecap="round"/>
 
-    </g>
+    <!-- plate of tacos -->
+    <ellipse cx="168" cy="416" rx="92" ry="20" fill="#DCE7E5"/>
+    <ellipse cx="168" cy="411" rx="92" ry="18" fill="#FFF"/>
+    <use href="#taco" transform="translate(134 400) rotate(-8) scale(.52)"/>
+    <use href="#taco" transform="translate(200 402) rotate(6) scale(.52)"/>
 
-    <!-- tacos held up on both sides -->
-    <use href="#taco" transform="translate(124 352) rotate(-14) scale(.88)"/>
-    <use href="#taco" transform="translate(388 352) rotate(14) scale(.88)"/>
-    <!-- hands -->
-    <g fill="#F4B98B">
-      <rect x="102" y="378" width="56" height="32" rx="16" transform="rotate(-14 130 394)"/>
-      <rect x="354" y="378" width="56" height="32" rx="16" transform="rotate(14 382 394)"/>
-    </g>
+    <!-- arm lifting a taco to the mouth -->
+    <path d="M322 416C300 392 262 368 214 336" fill="none" stroke="#E4572E" stroke-width="44" stroke-linecap="round"/>
+    <use href="#taco" transform="translate(180 292) rotate(-22) scale(.82)"/>
+    <rect x="160" y="308" width="60" height="34" rx="17" fill="#F4B98B" transform="rotate(-22 190 325)"/>
   </g>
   <circle cx="256" cy="256" r="240" fill="none" stroke="#1B7F77" stroke-width="10"/>
 </svg>
