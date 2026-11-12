@@ -1,200 +1,213 @@
+// Command demenu_bot is a Telegram bot that validates restaurant menus and
+// publishes them to a static site repository.
 package main
 
 import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
 	"log"
+	"log/slog"
+	"net"
+	"net/http"
 	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
+	"time"
 
-	"demenu_bot/config"
-	"demenu_bot/handlers"
-	"demenu_bot/middleware"
-	"demenu_bot/services"
-	"demenu_bot/storage"
-	"demenu_bot/utils"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/joho/godotenv"
 
-	"github.com/gin-gonic/gin"
+	"github.com/luis-serrano-l/demenu_bot/internal/bot"
+	"github.com/luis-serrano-l/demenu_bot/internal/config"
+	"github.com/luis-serrano-l/demenu_bot/internal/menuid"
+	"github.com/luis-serrano-l/demenu_bot/internal/publisher"
+	"github.com/luis-serrano-l/demenu_bot/internal/ratelimit"
+	"github.com/luis-serrano-l/demenu_bot/internal/redact"
+	"github.com/luis-serrano-l/demenu_bot/internal/store"
+)
+
+const (
+	// accessRequestsPerHour bounds how often one user can ping the admins.
+	accessRequestsPerHour = 1
+	shutdownGrace         = 10 * time.Second
 )
 
 func main() {
-	// Load configuration
-	cfg := config.Load()
+	os.Exit(run())
+}
 
-	// Set hash secret if provided in config
-	if cfg.HashSecret != "" {
-		utils.SetHashSecret(cfg.HashSecret)
+func run() int {
+	healthcheck := flag.Bool("healthcheck", false, "probe the local /health endpoint and exit 0 if healthy (used by the container HEALTHCHECK)")
+	flag.Parse()
+
+	// A .env file is a convenience for local runs; in containers the
+	// environment is injected and the file does not exist.
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
+		fmt.Fprintln(os.Stderr, "warning: could not read .env; using the environment only")
 	}
 
-	// Validate bot token
-	if cfg.TelegramBotToken == "" {
-		log.Fatal("ERROR: TELEGRAM_BOT_TOKEN not set in .env file. Please add your bot token.")
+	if *healthcheck {
+		return probe(os.Getenv("PORT"))
 	}
 
-	// Initialize bot service
-	botService, err := services.NewBotService(cfg)
+	cfg, err := config.Load(os.Getenv)
 	if err != nil {
-		log.Fatalf("Failed to initialize bot: %v", err)
+		// Config errors name variables, never values.
+		fmt.Fprintf(os.Stderr, "configuration error:\n%v\n", err)
+		return 2
 	}
 
-	if botService == nil {
-		log.Fatal("ERROR: Bot service is nil. Check your TELEGRAM_BOT_TOKEN.")
+	// Every log line, including those of the Telegram library, passes
+	// through the redactor.
+	out := redact.NewWriter(os.Stderr, cfg.Secrets()...)
+	logger := slog.New(slog.NewTextHandler(out, nil))
+	if err := tgbotapi.SetLogger(log.New(out, "telegram: ", log.LstdFlags)); err != nil {
+		logger.Error("could not set the telegram logger", "err", err)
+		return 1
 	}
 
-	// Initialize storage based on storage type
-	var storageInstance storage.Storage
+	if err := serve(cfg, logger); err != nil {
+		logger.Error("fatal", "err", err)
+		return 1
+	}
+	return 0
+}
 
-	if cfg.StorageType == "postgres" {
-		if cfg.DatabaseURL == "" {
-			log.Printf("WARNING: STORAGE_TYPE=postgres but DATABASE_URL not set. Falling back to file storage.")
-			log.Println("Initializing file storage...")
-			storageInstance = storage.NewFileStorage(cfg.StoragePath)
-			log.Printf("File storage initialized at: %s", cfg.StoragePath)
-		} else {
-			log.Println("Initializing PostgreSQL storage...")
-			pgStorage, err := storage.NewPostgresStorage(cfg.DatabaseURL)
-			if err != nil {
-				log.Printf("ERROR: Failed to initialize PostgreSQL storage: %v", err)
-				log.Printf("WARNING: Falling back to file storage due to PostgreSQL connection failure.")
-				storageInstance = storage.NewFileStorage(cfg.StoragePath)
-				log.Printf("File storage initialized at: %s", cfg.StoragePath)
-			} else {
-				storageInstance = pgStorage
-				log.Println("PostgreSQL storage initialized")
+func serve(cfg *config.Config, logger *slog.Logger) error {
+	ids, err := menuid.New(cfg.HashSecret)
+	if err != nil {
+		return err
+	}
+	pub, err := publisher.NewGitHub(cfg.GitHubToken, cfg.GitHubRepo, cfg.GitHubBranch)
+	if err != nil {
+		return err
+	}
+	st, err := store.NewFile(cfg.StoragePath)
+	if err != nil {
+		return err
+	}
+
+	client := bot.NewClient(cfg.TelegramToken, bot.DefaultTelegramAPI, logger)
+	handler := bot.NewHandler(
+		bot.Options{
+			SiteBaseURL:    cfg.SiteBaseURL,
+			AllowedUserIDs: cfg.AllowedUserIDs,
+			AdminUserIDs:   cfg.AdminUserIDs,
+			MaxUploadBytes: cfg.MaxUploadBytes,
+		},
+		ids, pub, st,
+		ratelimit.New(cfg.PublishLimit, cfg.PublishWindow, nil),
+		ratelimit.New(accessRequestsPerHour, time.Hour, nil),
+		client, logger,
+	)
+
+	srv := &http.Server{
+		Addr:              net.JoinHostPort("", strconv.Itoa(cfg.Port)),
+		Handler:           healthHandler(client.Connected),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       time.Minute,
+		MaxHeaderBytes:    8 << 10,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	logger.Info("starting",
+		"port", cfg.Port,
+		"repo", cfg.GitHubRepo,
+		"branch", cfg.GitHubBranch,
+		"publishers", len(cfg.AllowedUserIDs)+len(cfg.AdminUserIDs),
+		"max_upload_bytes", cfg.MaxUploadBytes,
+		"publish_limit", cfg.PublishLimit,
+		"publish_window", cfg.PublishWindow.String(),
+	)
+	if len(cfg.AdminUserIDs) == 0 {
+		logger.Warn("ADMIN_USER_IDS is empty: nobody will receive access requests")
+	}
+
+	httpErr := make(chan error, 1)
+	go func() { httpErr <- srv.ListenAndServe() }()
+	botDone := make(chan error, 1)
+	go func() { botDone <- client.Run(ctx, handler.Handle) }()
+
+	var runErr error
+	select {
+	case <-ctx.Done():
+		logger.Info("shutting down")
+	case err := <-httpErr:
+		runErr = fmt.Errorf("health server: %w", err)
+	case err := <-botDone:
+		if err != nil && !errors.Is(err, context.Canceled) {
+			runErr = fmt.Errorf("bot: %w", err)
+		}
+		botDone = nil // already drained
+	}
+	stop()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Warn("health server shutdown", "err", err)
+	}
+	if botDone != nil {
+		select {
+		case err := <-botDone:
+			if err != nil && !errors.Is(err, context.Canceled) {
+				logger.Warn("bot stopped with an error", "err", err)
 			}
+		case <-shutdownCtx.Done():
+			logger.Warn("in-flight updates did not finish before the shutdown deadline")
 		}
-	} else {
-		log.Println("Initializing file storage...")
-		storageInstance = storage.NewFileStorage(cfg.StoragePath)
-		log.Printf("File storage initialized at: %s", cfg.StoragePath)
 	}
+	return runErr
+}
 
-	// Set Gin mode
-	if cfg.Environment == "production" {
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	// Initialize router
-	router := gin.Default()
-
-	// Add access logging middleware (logs all requests with IP, path, hash, etc.)
-	router.Use(middleware.AccessLoggingMiddleware())
-
-	// Add CORS middleware for Hugo app
-	router.Use(func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-
-		// Allow requests from GitHub Pages and localhost for development
-		allowedOrigins := []string{
-			"https://luis-serrano-l.github.io",
-			"http://localhost:1313",
-			"http://localhost:8080",
+// healthHandler serves GET /health and nothing else. It reports liveness:
+// the process is up and able to answer. Whether Telegram has accepted the
+// token is included as information, because a wrong token is an operator
+// error that restarting the container would not fix.
+func healthHandler(connected func() bool) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
+		telegram := "connecting"
+		if connected() {
+			telegram = "connected"
 		}
-
-		// Check if origin is allowed, or allow all for development
-		allowOrigin := "*"
-		for _, allowed := range allowedOrigins {
-			if origin == allowed {
-				allowOrigin = origin
-				break
-			}
-		}
-
-		c.Writer.Header().Set("Access-Control-Allow-Origin", allowOrigin)
-		// Note: Cannot use Access-Control-Allow-Credentials: true with Access-Control-Allow-Origin: *
-		// Removing credentials header to fix Brave browser blocking
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
-		c.Writer.Header().Set("Access-Control-Max-Age", "3600")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		_, _ = fmt.Fprintf(w, `{"status":"ok","telegram":%q}`+"\n", telegram)
 	})
+	return mux
+}
 
-	// Initialize handlers
-	botHandler := handlers.NewBotHandler(cfg, botService, storageInstance)
-
-	// Webhook endpoint for Telegram (only used in production)
-	if !cfg.UsePolling {
-		router.POST("/webhook", botHandler.HandleWebhook)
-
-		// Automatically set webhook if URL is configured
-		if cfg.WebhookURL != "" {
-			log.Printf("Webhook mode enabled. Setting webhook URL automatically...")
-			if err := botService.SetWebhook(cfg.WebhookURL); err != nil {
-				log.Printf("WARNING: Failed to set webhook automatically: %v", err)
-				log.Printf("You may need to set it manually: curl -X POST \"https://api.telegram.org/bot<TOKEN>/setWebhook?url=%s\"", cfg.WebhookURL)
-			}
-		} else {
-			log.Println("Webhook mode enabled, but WEBHOOK_URL not set.")
-			log.Println("Set WEBHOOK_URL environment variable or RAILWAY_PUBLIC_DOMAIN (Railway auto-provides this)")
-			log.Println("Or set webhook manually: curl -X POST \"https://api.telegram.org/bot<TOKEN>/setWebhook?url=<YOUR_URL>/webhook\"")
+// probe is the container health check: distroless images have no shell or
+// curl, so the binary checks itself.
+func probe(port string) int {
+	n := config.DefaultPort
+	if port != "" {
+		var err error
+		if n, err = strconv.Atoi(port); err != nil || n < 1 || n > 65535 {
+			fmt.Fprintln(os.Stderr, "unhealthy: PORT is not a valid port number")
+			return 1
 		}
 	}
-
-	// API endpoints to serve JSON files for Hugo app
-	router.GET("/api/menu.json", botHandler.ServeMenuJSON)
-
-	// API endpoints to serve user-specific JSON files by hash
-	router.GET("/api/user/:hash/menu.json", botHandler.ServeUserMenuJSON)
-
-	// Debug endpoint for troubleshooting
-	router.GET("/api/debug/user/:hash", botHandler.DebugUserHash)
-
-	// Health check endpoint
-	router.GET("/health", func(c *gin.Context) {
-		healthInfo := gin.H{
-			"status": "ok",
-		}
-
-		// Add storage type information
-		if cfg.StorageType != "" {
-			healthInfo["storage_type"] = cfg.StorageType
-		}
-
-		// If using PostgreSQL, try to check database connection
-		if cfg.StorageType == "postgres" && storageInstance != nil {
-			if pgStorage, ok := storageInstance.(interface {
-				Ping() error
-			}); ok {
-				if err := pgStorage.Ping(); err == nil {
-					healthInfo["database"] = "connected"
-				} else {
-					healthInfo["database"] = "disconnected"
-					healthInfo["database_error"] = err.Error()
-				}
-			}
-		}
-
-		c.JSON(200, healthInfo)
-	})
-
-	// Start bot in polling mode (for local development)
-	if cfg.UsePolling {
-		if botService == nil {
-			log.Println("Warning: Bot service is nil. Cannot start polling. Check your TELEGRAM_BOT_TOKEN.")
-		} else {
-			go func() {
-				log.Println("Starting polling goroutine...")
-				if err := botService.StartPolling(botHandler.ProcessUpdate); err != nil {
-					log.Printf("Error starting polling: %v", err)
-				}
-			}()
-			log.Println("Bot is running in polling mode (local development)")
-		}
-	} else {
-		log.Println("Polling mode disabled. Using webhook mode.")
+	client := &http.Client{Timeout: 3 * time.Second}
+	// Loopback only, and the port is a validated integer.
+	resp, err := client.Get("http://" + net.JoinHostPort("127.0.0.1", strconv.Itoa(n)) + "/health") //nolint:gosec,noctx // see above; client has a timeout
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "unhealthy:", err)
+		return 1
 	}
-
-	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	defer resp.Body.Close() //nolint:errcheck // exiting anyway
+	if resp.StatusCode != http.StatusOK {
+		fmt.Fprintln(os.Stderr, "unhealthy: HTTP", resp.StatusCode)
+		return 1
 	}
-
-	log.Printf("Starting server on port %s", port)
-	if err := router.Run(":" + port); err != nil {
-		log.Fatal("Failed to start server:", err)
-	}
+	return 0
 }
