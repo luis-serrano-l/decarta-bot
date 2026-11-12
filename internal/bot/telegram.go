@@ -12,7 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unicode/utf8"
+	"unicode/utf16"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -24,7 +24,7 @@ const (
 	pollTimeoutSeconds = 50
 	httpTimeout        = 70 * time.Second // must exceed the long-poll timeout
 	maxWorkers         = 8
-	maxMessageRunes    = 4000 // Telegram rejects messages over 4096 characters
+	maxMessageUnits    = 4000 // Telegram rejects messages over 4096 UTF-16 code units
 	initialBackoff     = 2 * time.Second
 	maxBackoff         = time.Minute
 )
@@ -188,9 +188,15 @@ func (c *Client) Typing(chatID int64) error {
 	return nil
 }
 
+// clipMessage keeps text within Telegram's limit, which counts UTF-16 code
+// units: an emoji is two.
 func clipMessage(text string) string {
-	if utf8.RuneCountInString(text) > maxMessageRunes {
-		return string([]rune(text)[:maxMessageRunes]) + "…"
+	units := 0
+	for i, r := range text {
+		units += utf16.RuneLen(r)
+		if units > maxMessageUnits {
+			return text[:i] + "…"
+		}
 	}
 	return text
 }

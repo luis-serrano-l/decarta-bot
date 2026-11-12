@@ -63,7 +63,7 @@ Rules that apply to **Publish**, **Yes, delete it** and **Cancel**:
 - Sending a new menu, or `/delete`, replaces whatever was waiting; the
   older buttons then answer "This button has expired or was already used".
 - If publishing or deleting fails, the button stays valid so you can tap
-  it again.
+  it again. Taps made while one is still in progress are ignored.
 
 ## Rate limit
 

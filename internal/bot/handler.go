@@ -46,6 +46,10 @@ const confirmTTL = 15 * time.Minute
 // clears it after about five seconds.
 const typingInterval = 4 * time.Second
 
+// typingGrace is how long a reply waits for an indicator already on its
+// way to Telegram.
+const typingGrace = time.Second
+
 // maxIssuesShown is how many validation problems one reply lists.
 const maxIssuesShown = 5
 
@@ -134,6 +138,7 @@ type Handler struct {
 
 	mu      sync.Mutex
 	pending map[string]*pending // by menu id; at most one per user
+	busy    map[string]struct{} // menu ids with a publish or delete in flight
 }
 
 // pending is an action waiting for its confirmation button. It lives in
@@ -158,6 +163,7 @@ func NewHandler(opts Options, ids *menuid.Generator, pub publisher.Publisher, st
 		tg: tg, log: log,
 		now:     time.Now,
 		pending: make(map[string]*pending),
+		busy:    make(map[string]struct{}),
 	}
 }
 
@@ -476,6 +482,23 @@ func (h *Handler) callback(ctx context.Context, cq *tgbotapi.CallbackQuery) {
 		h.template(u)
 	case actHow:
 		h.reply(u, howText)
+	case actPublish, actDelete, actCancel:
+		// One confirmed action per user at a time. Updates are handled
+		// concurrently, so without this a second tap during a slow publish
+		// would find the draft taken and wipe the buttons needed to retry,
+		// and a delete could interleave with a publish.
+		if !h.begin(u.id) {
+			return
+		}
+		defer h.end(u.id)
+		h.confirm(ctx, u, msgID, action, nonce)
+	default:
+		h.log.Warn("unknown callback action", "id", u.id)
+	}
+}
+
+func (h *Handler) confirm(ctx context.Context, u user, msgID int, action, nonce string) {
+	switch action {
 	case actPublish:
 		h.confirmPublish(ctx, u, msgID, nonce)
 	case actDelete:
@@ -487,9 +510,25 @@ func (h *Handler) callback(ctx context.Context, cq *tgbotapi.CallbackQuery) {
 		}
 		h.log.Info("action cancelled", "id", u.id)
 		h.edit(u, msgID, "✖️ Cancelled. Nothing was changed.")
-	default:
-		h.log.Warn("unknown callback action", "id", u.id)
 	}
+}
+
+// begin marks id as having a confirmed action in flight; it reports false
+// if one already is.
+func (h *Handler) begin(id string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, running := h.busy[id]; running {
+		return false
+	}
+	h.busy[id] = struct{}{}
+	return true
+}
+
+func (h *Handler) end(id string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	delete(h.busy, id)
 }
 
 const expiredText = "⌛ This button has expired or was already used. Send the menu or the command again."
@@ -525,8 +564,11 @@ func (h *Handler) confirmPublish(ctx context.Context, u user, msgID int, nonce s
 	cancel()
 	stop()
 	if err != nil {
-		h.restore(u.id, p)
 		h.log.Error("publish failed", "id", u.id, "err", err)
+		if !h.restore(u.id, p) {
+			h.reply(u, "❌ That menu could not be published right now. Your newer preview is still waiting.")
+			return
+		}
 		h.reply(u, "❌ Your menu is valid but could not be published right now. Tap Publish to try again in a moment.")
 		return
 	}
@@ -610,14 +652,17 @@ func (h *Handler) take(id, action, nonce string) *pending {
 	return p
 }
 
-// restore puts back an action taken by take, unless the user has started a
+// restore puts back an action taken by take, so that its buttons work
+// again. It reports false, and does nothing, if the user has started a
 // newer one in the meantime.
-func (h *Handler) restore(id string, p *pending) {
+func (h *Handler) restore(id string, p *pending) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if _, newer := h.pending[id]; !newer {
-		h.pending[id] = p
+	if _, newer := h.pending[id]; newer {
+		return false
 	}
+	h.pending[id] = p
+	return true
 }
 
 // peek returns a copy of the live pending action for id, or nil.
@@ -632,7 +677,9 @@ func (h *Handler) peek(id string) *pending {
 }
 
 // working shows "typing…" in the user's chat until stop is called. stop
-// waits for the indicator goroutine, so nothing is sent after it returns.
+// waits briefly for the indicator goroutine, so that an indicator does not
+// land after the reply, but never long: a slow Telegram must not hold up
+// the reply or the worker.
 func (h *Handler) working(ctx context.Context, u user) (stop func()) {
 	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
@@ -654,7 +701,10 @@ func (h *Handler) working(ctx context.Context, u user) (stop func()) {
 	}()
 	return func() {
 		cancel()
-		<-done
+		select {
+		case <-done:
+		case <-time.After(typingGrace):
+		}
 	}
 }
 

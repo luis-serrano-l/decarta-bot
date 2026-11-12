@@ -176,9 +176,10 @@ func unknown(v *issues, p string, obj map[string]any, allowed ...string) {
 	}
 	slices.Sort(extra)
 	for _, k := range extra {
-		path := k
+		// The key is user input of any length: clip it in the path too.
+		path := clip(k)
 		if p != "" {
-			path = p + "." + k
+			path = p + "." + path
 		}
 		v.add(path, fmt.Sprintf("unknown field %q", clip(k)),
 			`remove it; the fields allowed here are "`+strings.Join(allowed, `", "`)+`"`)

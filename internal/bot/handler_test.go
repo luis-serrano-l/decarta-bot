@@ -12,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"unicode/utf16"
+	"unicode/utf8"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -693,6 +695,66 @@ func TestPublishFailureKeepsThePreview(t *testing.T) {
 	}
 }
 
+// slowPublisher blocks each Publish until released, to test what happens
+// while one is in flight.
+type slowPublisher struct {
+	*publisher.Fake
+	started chan struct{}
+	release chan struct{}
+}
+
+func (s *slowPublisher) Publish(ctx context.Context, id string, content []byte) error {
+	s.started <- struct{}{}
+	<-s.release
+	return s.Fake.Publish(ctx, id, content)
+}
+
+func TestTapsDuringAPublishAreIgnored(t *testing.T) {
+	f := newFixture(t)
+	slow := &slowPublisher{Fake: f.pub, started: make(chan struct{}), release: make(chan struct{})}
+	f.h.pub = slow
+	f.pub.Err = errors.New("github: down")
+
+	f.send(allowedID, validList)
+	msgID, publish, _ := f.tg.button(allowedID, "Publish")
+	_, cancel, _ := f.tg.button(allowedID, "Cancel")
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		f.h.Handle(context.Background(), callbackUpdate(allowedID, msgID, "cb-slow", publish.Data))
+	}()
+	<-slow.started
+
+	// Impatient taps while the first is still publishing change nothing:
+	// in particular the buttons are not replaced by "expired".
+	f.pressData(allowedID, msgID, publish.Data)
+	f.pressData(allowedID, msgID, cancel.Data)
+	if got := f.tg.lastMsg(allowedID); !slices.Equal(labels(got), []string{"Publish", "Cancel"}) {
+		t.Fatalf("after taps during a publish: %q with buttons %q", got.text, labels(got))
+	}
+	// Ignored taps are still acknowledged, or their buttons would spin.
+	if len(f.tg.answered) != 3 {
+		t.Errorf("answered %d callbacks, want all 3 taps acknowledged", len(f.tg.answered))
+	}
+
+	slow.release <- struct{}{}
+	<-done
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Tap Publish to try again") {
+		t.Fatalf("after the failure: %q", got)
+	}
+
+	// The failed publish left its button usable.
+	f.pub.Err = nil
+	go func() { <-slow.started; slow.release <- struct{}{} }()
+	f.press(allowedID, "Publish")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Menu published") {
+		t.Errorf("retry: %q", got)
+	}
+	if f.pub.Calls() != 2 {
+		t.Errorf("publisher calls = %d, want 2", f.pub.Calls())
+	}
+}
+
 func TestPublishRateLimit(t *testing.T) {
 	f := newFixture(t) // limit: 2 per hour
 	id := f.ids.ID(allowedID)
@@ -809,6 +871,38 @@ func TestValidationRepliesListAtMostFiveProblems(t *testing.T) {
 	f.send(allowedID, `{"categories":[{"id":"a","name":"A","items":[{"name":"x"}]}]}`)
 	if got := f.tg.last(allowedID); !strings.Contains(got, "has 1 problem:") || !strings.Contains(got, "Nothing was published") {
 		t.Errorf("single problem reply:\n%s", got)
+	}
+}
+
+func TestLongFieldNameDoesNotFloodTheReply(t *testing.T) {
+	f := newFixture(t)
+	f.h.opts.MaxUploadBytes = 64 * 1024
+	key := strings.Repeat("k", 9000)
+	f.send(allowedID, `{"categories":[{"id":"a","name":"A","items":[],"`+key+`":1}],"extra":2}`)
+	got := f.tg.last(allowedID)
+	if len(got) > 1000 || !strings.Contains(got, "1. extra") || !strings.Contains(got, "2. categories[0].kkk") || !strings.Contains(got, "Fix: remove it") {
+		t.Errorf("reply is %d bytes and may have lost the other problems:\n%.300s", len(got), got)
+	}
+}
+
+func TestClipMessageCountsUTF16(t *testing.T) {
+	for _, text := range []string{
+		strings.Repeat("a", 5000),
+		strings.Repeat("😀", 3000), // 2 UTF-16 units each
+		strings.Repeat("ñ", 4000),
+		"short",
+	} {
+		got := clipMessage(text)
+		units := 0
+		for _, r := range got {
+			units += utf16.RuneLen(r)
+		}
+		if units > 4096 || !utf8.ValidString(got) {
+			t.Errorf("clipped to %d UTF-16 units (valid UTF-8: %v), want at most 4096", units, utf8.ValidString(got))
+		}
+	}
+	if clipMessage("short") != "short" || clipMessage(strings.Repeat("ñ", 4000)) != strings.Repeat("ñ", 4000) {
+		t.Error("a message within the limit was changed")
 	}
 }
 

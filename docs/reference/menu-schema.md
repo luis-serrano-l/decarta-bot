@@ -117,4 +117,7 @@ CATEGORY: Desserts
   `main-dishes`).
 - Images cannot be set in the list format; use JSON.
 
-All the limits above apply. Problems are reported by line number.
+All the limits above apply. Mistakes in the text itself are reported by
+line number; a limit that is exceeded (a name that is too long, a price
+out of range) is reported with the field path of the converted document,
+such as `categories[0].items[1].name`: first category, second item.
