@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -32,7 +33,12 @@ import (
 const (
 	// accessRequestsPerHour bounds how often one user can ping the admins.
 	accessRequestsPerHour = 1
-	shutdownGrace         = 10 * time.Second
+	// uploadsPerWindow bounds how many menus one user can have checked and
+	// previewed. It is deliberately looser than the publish limit, which
+	// meters commits: correcting a menu and sending it again is normal.
+	uploadsPerWindow = 20
+	uploadWindow     = 10 * time.Minute
+	shutdownGrace    = 10 * time.Second
 )
 
 func main() {
@@ -100,6 +106,7 @@ func serve(cfg *config.Config, logger *slog.Logger) error {
 		},
 		ids, pub, st,
 		ratelimit.New(cfg.PublishLimit, cfg.PublishWindow, nil),
+		ratelimit.New(uploadsPerWindow, uploadWindow, nil),
 		ratelimit.New(accessRequestsPerHour, time.Hour, nil),
 		client, logger,
 	)
@@ -190,6 +197,7 @@ func healthHandler(connected func() bool) http.Handler {
 // curl, so the binary checks itself.
 func probe(port string) int {
 	n := config.DefaultPort
+	port = strings.TrimSpace(port) // as config.Load does
 	if port != "" {
 		var err error
 		if n, err = strconv.Atoi(port); err != nil || n < 1 || n > 65535 {

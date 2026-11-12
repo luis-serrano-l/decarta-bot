@@ -1,139 +1,145 @@
 <p align="center"><img src="docs/logo.svg" alt="Demenu logo" width="160"></p>
 
-# demenu_bot
+<h1 align="center">demenu_bot</h1>
 
-[![CI](https://github.com/luis-serrano-l/demenu_bot/actions/workflows/ci.yml/badge.svg)](https://github.com/luis-serrano-l/demenu_bot/actions/workflows/ci.yml)
+<p align="center">
+  <a href="https://github.com/luis-serrano-l/demenu_bot/actions/workflows/ci.yml"><img src="https://github.com/luis-serrano-l/demenu_bot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue.svg" alt="Licence: MIT"></a>
+</p>
 
-A Telegram bot that lets authorised users publish a restaurant menu. The
-bot validates what it receives and commits it as `static/menus/<id>.json`
-to the companion static site,
-[luis-serrano-l/demenu](https://github.com/luis-serrano-l/demenu), through
-the GitHub Contents API. The site serves the menus; the bot serves nothing
-but a health check.
+A restaurant owner sends their menu to a Telegram bot and gets back a link
+to a web page they can share with customers. The bot checks the menu,
+shows a preview, and on confirmation commits it to the companion static
+site, [luis-serrano-l/demenu](https://github.com/luis-serrano-l/demenu),
+which GitHub Pages serves. There is no database and no public server: the
+bot needs outbound HTTPS only, and the site repository is the source of
+truth.
 
-```
-Telegram user ──▶ bot (long polling) ──▶ validate ──▶ rate limit ──▶ GitHub Contents API
-                                                                        │
-                                             site repo: static/menus/<id>.json ──▶ GitHub Pages
+```mermaid
+flowchart LR
+    T["Telegram<br/>owner sends a menu"] -->|long polling| B["demenu_bot<br/>validate, preview, confirm"]
+    B -->|"commit static/menus/&lt;id&gt;.json"| G["GitHub<br/>site repository"]
+    G -->|"Actions build, about a minute"| P["GitHub Pages<br/>/menu/&lt;id&gt;"]
 ```
 
 ## Quick start
 
-You need a bot token from [@BotFather](https://t.me/BotFather) and a
-fine-grained GitHub token limited to the site repository with
-**Contents: Read and write**.
+About five minutes, from nothing to a published menu. You need Docker, a
+GitHub account and a Telegram account.
+
+**1. Get a site to publish to.** Fork
+[luis-serrano-l/demenu](https://github.com/luis-serrano-l/demenu). In your
+fork open **Settings → Pages** and set **Source** to **GitHub Actions**,
+then open the **Actions** tab, enable workflows, and run **Deploy Hugo site
+to Pages** once. Your site is now at `https://<you>.github.io/demenu`.
+
+**2. Create the bot.** In Telegram, talk to
+[@BotFather](https://t.me/BotFather): send `/newbot`, choose a name and a
+username, and copy the token it gives you.
+
+**3. Create a GitHub token.** Go to
+[github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new)
+and create a **fine-grained** token with **Repository access → Only select
+repositories →** your fork, and **Permissions → Repository → Contents:
+Read and write**. Nothing else. Copy the token.
+
+**4. Configure.**
 
 ```bash
-cp .env.example .env        # fill in the required values
+git clone https://github.com/luis-serrano-l/demenu_bot.git
+cd demenu_bot
+cp .env.example .env
+openssl rand -hex 32        # paste the output as HASH_SECRET
+```
+
+Edit `.env` and fill in the five required values:
+
+```ini
+TELEGRAM_BOT_TOKEN=<token from step 2>
+HASH_SECRET=<output of openssl rand -hex 32>
+GITHUB_TOKEN=<token from step 3>
+GITHUB_REPO=<you>/demenu
+HUGO_BASE_URL=https://<you>.github.io/demenu
+```
+
+**5. Start the bot.**
+
+```bash
 docker compose up --build --wait
 ```
 
-Or without Docker (Go 1.26 or newer):
+The command returns when the container is healthy.
+
+**6. Give yourself access.** Open your bot in Telegram and send `/myid`.
+Put the number it replies with in `.env` as `ADMIN_USER_IDS=<number>`, then
+apply it:
 
 ```bash
-go run .
+docker compose up -d --force-recreate --wait
 ```
 
-The bot uses long polling, so it needs outbound HTTPS only: no public URL,
-no open ports, no TLS certificate.
+**7. Publish.** Send `/template` to the bot. It sends you `menu.json`; send
+that file straight back (or edit it first). The bot replies with a summary
+and two buttons. Tap **Publish**, then **Open my menu**. The page is live
+about a minute later, once the site has rebuilt.
 
-## Configuration
-
-Every variable is documented in [.env.example](.env.example).
-
-| Variable | Required | Default | Purpose |
-|---|---|---|---|
-| `TELEGRAM_BOT_TOKEN` | yes | | Bot token from @BotFather |
-| `HASH_SECRET` | yes | | Key for menu ids, at least 32 characters (`openssl rand -hex 32`) |
-| `GITHUB_TOKEN` | yes | | Token with Contents read/write on the site repository |
-| `GITHUB_REPO` | yes | | Site repository, `owner/name` |
-| `HUGO_BASE_URL` | yes | | Public base URL of the site |
-| `GITHUB_BRANCH` | no | `main` | Branch to commit to |
-| `ALLOWED_USER_IDS` | no | none | Telegram user IDs that may publish |
-| `ADMIN_USER_IDS` | no | none | May publish, use admin commands, receive access requests |
-| `STORAGE_PATH` | no | `./data` | Local copy of published menus |
-| `PORT` | no | `8080` | Port of `/health` |
-| `MAX_UPLOAD_BYTES` | no | `262144` | Largest accepted menu (256 KB) |
-| `PUBLISH_RATE_LIMIT` | no | `5` | Publishes per user per window |
-| `PUBLISH_RATE_WINDOW` | no | `1h` | Rate-limit window |
-
-The bot refuses to start if a required variable is missing, if
-`HASH_SECRET` is shorter than 32 characters, or if any value is malformed.
+Something not working? `docker compose logs bot` says why; see
+[Run with Docker](docs/how-to/run-with-docker.md#troubleshooting).
 
 ## Using the bot
 
-Send the bot a menu in a private chat, either as a message or as a `.json`
-file. Editing a sent message publishes it again.
+| Command | What it does |
+|---|---|
+| `/start` | What the bot does, with **Get a template** and **How it works** buttons |
+| `/help` | The commands available to you |
+| `/template` | Sends an example `menu.json` to edit and send back |
+| `/link` | The link to your menu |
+| `/status` | Your access, whether a menu is published, anything awaiting confirmation |
+| `/delete` | Unpublishes your menu, after a confirmation button |
 
-| Command | Who | What |
-|---|---|---|
-| `/start`, `/help` | everyone | Usage |
-| `/request_access` | everyone | Ask the administrators for access (once per hour) |
-| `/template` | publishers | An example menu to copy |
-| `/myurl` | publishers | The public URL of your menu |
-| `/status`, `/myid` | administrators | Bot status; your Telegram ID |
-
-List format:
+Send a menu as a `.json` file, as JSON pasted into a message, or as plain
+text:
 
 ```
-CATEGORY: Appetizers
-DESCRIPTION: Start your meal
-
-- ITEM: Bruschetta
-  PRICE: 12.99
-  DESCRIPTION: Classic tomato basil
+CATEGORY: Starters
+- ITEM: Soup of the day
+  PRICE: 5.00
+  DESCRIPTION: Ask your waiter
 ```
 
-JSON format (this is also what gets published):
+Nothing is published until you tap **Publish**. If the menu has mistakes,
+the bot names each field and how to fix it:
 
-```json
-{
-  "categories": [
-    {
-      "id": "appetizers",
-      "name": "Appetizers",
-      "description": "Start your meal",
-      "items": [
-        { "name": "Bruschetta", "price": 12.99, "description": "Classic tomato basil", "image": "/images/bruschetta.jpg" }
-      ]
-    }
-  ]
-}
+```
+❌ Your menu has 1 problem:
+
+1. categories[0].items[1].price
+   missing price
+   Fix: add a number, for example "price": 9.5
 ```
 
-Validation is strict: unknown fields are rejected, strings and counts are
-capped (50 categories, 200 items each, names 100 characters, descriptions
-500), prices must be between 0 and 1,000,000, and `image` must be an
-`https://` URL or a site-relative path such as `/images/x.jpg`.
+## Documentation
 
-## Security
+The [documentation](docs/README.md) follows [Diátaxis](https://diataxis.fr/):
 
-- **Menu ids** are base62 of the first 12 bytes of
-  HMAC-SHA256(`HASH_SECRET`, user ID). They cannot be turned back into a
-  Telegram ID without the secret. There is no default secret.
-- **Input** is size-capped before parsing and re-encoded before publishing,
-  so only validated, canonical JSON reaches the site.
-- **Rate limit**: 5 publishes per user per hour by default. The counters
-  are in memory and reset when the bot restarts.
-- **Logs** never contain tokens (a redacting writer wraps all output) and
-  identify users only by their menu id.
-- **HTTP surface**: `GET /health` only.
-- **Container**: distroless, non-root, read-only root filesystem, all
-  capabilities dropped, base images pinned by digest.
+| | |
+|---|---|
+| **Tutorial** | [Publish your first menu](docs/tutorial/first-menu.md) |
+| **How-to guides** | [Run with Docker](docs/how-to/run-with-docker.md) · [Create the BotFather token](docs/how-to/create-botfather-token.md) · [Create the fine-grained GitHub token](docs/how-to/create-github-token.md) |
+| **Reference** | [Environment variables](docs/reference/environment.md) · [Menu JSON schema](docs/reference/menu-schema.md) · [Commands](docs/reference/commands.md) |
+| **Explanation** | [Design](docs/explanation/design.md) · [Threat model](docs/explanation/threat-model.md) |
 
-See [SECURITY.md](SECURITY.md) to report a vulnerability.
+## Roadmap
 
-## Development
+- **Webhook mode through a Cloudflare Tunnel**, as an alternative to long
+  polling that still needs no open inbound port.
+- **A snap package**, for running the bot without Docker.
 
-```bash
-go test -race ./...            # tests (no network needed)
-gofmt -l . && go vet ./...     # format check and vet
-golangci-lint run              # lint, v2 (config in .golangci.yml)
-govulncheck ./...              # known vulnerabilities
-```
+## Contributing
 
-The layout is described in [CLAUDE.md](CLAUDE.md). Commits follow
-[Conventional Commits](https://www.conventionalcommits.org/).
+See [CONTRIBUTING.md](CONTRIBUTING.md). To report a vulnerability, see
+[SECURITY.md](SECURITY.md). Changes are recorded in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Licence
 

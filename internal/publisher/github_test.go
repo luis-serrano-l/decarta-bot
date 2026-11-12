@@ -28,11 +28,15 @@ type fakeGitHub struct {
 	mu        sync.Mutex
 	content   []byte // nil means the file does not exist
 	puts      int
+	deletes   int
 	gets      int
 	lastPut   putBody
 	getStatus int // if non-zero, GET fails with this status
-	putStatus int // if non-zero, PUT fails with this status
-	conflicts int // number of PUTs to answer with 409 before succeeding
+	putStatus int // if non-zero, PUT and DELETE fail with this status
+	conflicts int // number of PUTs or DELETEs to answer with 409 before succeeding
+
+	branchMissing bool // the repository or branch does not exist: every GET is a 404
+	branchChecks  int
 }
 
 type putBody struct {
@@ -58,6 +62,15 @@ func (f *fakeGitHub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(r.URL.String(), testToken) {
 		f.t.Error("token appeared in the request URL")
 	}
+	if r.URL.Path == "/repos/"+testRepo+"/branches/"+testBranch && r.Method == http.MethodGet {
+		f.branchChecks++
+		if f.branchMissing {
+			writeErr(w, http.StatusNotFound, "Branch not found")
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"name": testBranch})
+		return
+	}
 	if r.URL.Path != testPath {
 		f.t.Errorf("path = %q, want %q", r.URL.Path, testPath)
 	}
@@ -71,7 +84,7 @@ func (f *fakeGitHub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case f.getStatus != 0:
 			writeErr(w, f.getStatus, "get failed")
-		case f.content == nil:
+		case f.content == nil || f.branchMissing:
 			writeErr(w, http.StatusNotFound, "Not Found")
 		default:
 			writeJSON(w, http.StatusOK, map[string]string{"type": "file", "sha": blobSHA(f.content)})
@@ -111,6 +124,28 @@ func (f *fakeGitHub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		f.content = decoded
 		writeJSON(w, status, map[string]any{"content": map[string]string{"sha": blobSHA(decoded)}})
+	case http.MethodDelete:
+		f.deletes++
+		var body putBody
+		raw, _ := io.ReadAll(r.Body)
+		if err := json.Unmarshal(raw, &body); err != nil {
+			f.t.Errorf("bad DELETE body: %v", err)
+		}
+		f.lastPut = body
+		switch {
+		case f.putStatus != 0:
+			writeErr(w, f.putStatus, "delete failed")
+		case f.conflicts > 0:
+			f.conflicts--
+			writeErr(w, http.StatusConflict, "is at abc but expected def")
+		case f.content == nil:
+			writeErr(w, http.StatusNotFound, "Not Found")
+		case body.SHA != blobSHA(f.content):
+			writeErr(w, http.StatusConflict, "sha mismatch")
+		default:
+			f.content = nil
+			writeJSON(w, http.StatusOK, map[string]any{"content": nil})
+		}
 	default:
 		f.t.Errorf("unexpected method %s", r.Method)
 		writeErr(w, http.StatusMethodNotAllowed, "nope")
@@ -289,5 +324,88 @@ func TestFake(t *testing.T) {
 	}
 	if f.Calls() != 2 {
 		t.Errorf("Calls() = %d, want 2", f.Calls())
+	}
+}
+
+func TestGitHubDelete(t *testing.T) {
+	tests := []struct {
+		name        string
+		id          string
+		existing    []byte
+		getStatus   int
+		delStatus   int
+		conflicts   int
+		wantErr     string
+		wantIs      error
+		wantDeletes int
+		wantGone    bool
+		noBranch    bool
+	}{
+		{name: "wrong repository or branch is not mistaken for nothing published", id: testID, existing: []byte("old"), noBranch: true, wantErr: "check GITHUB_REPO, GITHUB_BRANCH"},
+		{name: "deletes an existing file", id: testID, existing: []byte("old"), wantDeletes: 1, wantGone: true},
+		{name: "nothing published", id: testID, wantIs: ErrNotFound, wantGone: true},
+		{name: "retries once on conflict", id: testID, existing: []byte("old"), conflicts: 1, wantDeletes: 2, wantGone: true},
+		{name: "gives up after repeated conflicts", id: testID, existing: []byte("old"), conflicts: 5, wantErr: "HTTP 409", wantDeletes: 2},
+		{name: "bad token", id: testID, existing: []byte("old"), getStatus: http.StatusUnauthorized, wantErr: "check GITHUB_TOKEN"},
+		{name: "forbidden on write", id: testID, existing: []byte("old"), delStatus: http.StatusForbidden, wantErr: "Contents read/write", wantDeletes: 1},
+		{name: "path traversal id", id: "../../README.md00", existing: []byte("old"), wantIs: ErrInvalidID},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeGitHub{t: t, content: tt.existing, getStatus: tt.getStatus, putStatus: tt.delStatus, conflicts: tt.conflicts, branchMissing: tt.noBranch}
+			srv := httptest.NewServer(fake)
+			defer srv.Close()
+
+			g, err := NewGitHub(testToken, testRepo, testBranch, WithAPIBase(srv.URL), WithHTTPClient(srv.Client()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = g.Delete(context.Background(), tt.id)
+
+			switch {
+			case tt.wantIs != nil:
+				if !errors.Is(err, tt.wantIs) {
+					t.Fatalf("Delete() error = %v, want %v", err, tt.wantIs)
+				}
+			case tt.wantErr == "" && err != nil:
+				t.Fatalf("Delete() error = %v", err)
+			case tt.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tt.wantErr)):
+				t.Fatalf("Delete() error = %v, want it to contain %q", err, tt.wantErr)
+			}
+			if err != nil && strings.Contains(err.Error(), testToken) {
+				t.Errorf("error leaks the token: %v", err)
+			}
+			if fake.deletes != tt.wantDeletes {
+				t.Errorf("DELETE requests = %d, want %d", fake.deletes, tt.wantDeletes)
+			}
+			if gone := fake.content == nil; gone != tt.wantGone {
+				t.Errorf("file gone = %v, want %v", gone, tt.wantGone)
+			}
+			if tt.wantDeletes > 0 {
+				if fake.lastPut.Message != "menu: delete "+testID || fake.lastPut.Branch != testBranch || fake.lastPut.SHA == "" {
+					t.Errorf("DELETE body = %+v", fake.lastPut)
+				}
+			}
+		})
+	}
+}
+
+func TestFakeDelete(t *testing.T) {
+	f := &Fake{}
+	ctx := context.Background()
+	if err := f.Delete(ctx, testID); !errors.Is(err, ErrNotFound) {
+		t.Errorf("Delete() before any publish = %v, want ErrNotFound", err)
+	}
+	if err := f.Publish(ctx, testID, []byte("x")); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Delete(ctx, testID); err != nil {
+		t.Errorf("Delete() = %v", err)
+	}
+	if _, ok := f.Get(testID); ok {
+		t.Error("content is still published after Delete")
+	}
+	if f.Deletes() != 2 {
+		t.Errorf("Deletes() = %d, want 2", f.Deletes())
 	}
 }

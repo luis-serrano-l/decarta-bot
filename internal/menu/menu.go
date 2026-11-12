@@ -54,86 +54,113 @@ type Item struct {
 
 var slugRe = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
-// Validate checks m against every structural and size rule. The returned
-// error names the offending element and is safe to show to the user.
+// Validate checks m against every structural and size rule. It returns a
+// *ValidationError listing every problem found, each with the path of the
+// offending field and a way to fix it.
 func (m *Menu) Validate() error {
-	if m == nil || len(m.Categories) == 0 {
-		return fmt.Errorf("menu must have at least one category")
-	}
-	if len(m.Categories) > MaxCategories {
-		return fmt.Errorf("too many categories: %d (max %d)", len(m.Categories), MaxCategories)
+	var v issues
+	switch {
+	case m == nil || len(m.Categories) == 0:
+		v.add("categories", "the menu must have at least one category",
+			`add a category with "id", "name" and "items"`)
+		return v.err()
+	case len(m.Categories) > MaxCategories:
+		v.add("categories", fmt.Sprintf("too many categories: %d (max %d)", len(m.Categories), MaxCategories),
+			"merge or remove categories")
+		return v.err()
 	}
 	seen := make(map[string]struct{}, len(m.Categories))
 	for i, c := range m.Categories {
-		where := fmt.Sprintf("category %d", i+1)
-		if utf8.RuneCountInString(c.ID) > MaxIDLen || !slugRe.MatchString(c.ID) {
-			return fmt.Errorf("%s: id must be 1-%d characters of a-z, 0-9 and single hyphens", where, MaxIDLen)
-		}
-		if _, dup := seen[c.ID]; dup {
-			return fmt.Errorf("%s: duplicate id %q", where, c.ID)
+		p := fmt.Sprintf("categories[%d]", i)
+		_, dup := seen[c.ID]
+		switch {
+		case c.ID == "":
+			v.add(p+".id", "missing id", `add a short id such as "starters"`)
+		case utf8.RuneCountInString(c.ID) > MaxIDLen || !slugRe.MatchString(c.ID):
+			v.add(p+".id", fmt.Sprintf("id must be 1-%d characters of a-z, 0-9 and single hyphens", MaxIDLen),
+				fmt.Sprintf("use something like %q", slug(c.Name, c.ID)))
+		case dup:
+			v.add(p+".id", fmt.Sprintf("duplicate id %q", c.ID), "give every category a different id")
 		}
 		seen[c.ID] = struct{}{}
-		if err := checkText(c.Name, "name", true, MaxNameLen); err != nil {
-			return fmt.Errorf("%s: %w", where, err)
-		}
-		if err := checkText(c.Description, "description", false, MaxDescriptionLen); err != nil {
-			return fmt.Errorf("%s: %w", where, err)
-		}
-		if c.Items == nil {
-			return fmt.Errorf("%s: missing items", where)
-		}
-		if len(c.Items) > MaxItemsPerCategory {
-			return fmt.Errorf("%s: too many items: %d (max %d)", where, len(c.Items), MaxItemsPerCategory)
+		checkText(&v, p, "name", c.Name, true, MaxNameLen)
+		checkText(&v, p, "description", c.Description, false, MaxDescriptionLen)
+		switch {
+		case c.Items == nil:
+			v.add(p+".items", "missing items", `add "items": [ ... ]; the list may be empty`)
+		case len(c.Items) > MaxItemsPerCategory:
+			v.add(p+".items", fmt.Sprintf("too many items: %d (max %d)", len(c.Items), MaxItemsPerCategory),
+				"split the category in two")
 		}
 		for j, it := range c.Items {
-			if err := it.validate(); err != nil {
-				return fmt.Errorf("%s, item %d: %w", where, j+1, err)
+			if j >= MaxItemsPerCategory {
+				break
 			}
+			it.validate(&v, fmt.Sprintf("%s.items[%d]", p, j))
 		}
 	}
-	return nil
+	return v.err()
 }
 
-func (it Item) validate() error {
-	if err := checkText(it.Name, "name", true, MaxNameLen); err != nil {
-		return err
+func (it Item) validate(v *issues, p string) {
+	checkText(v, p, "name", it.Name, true, MaxNameLen)
+	checkText(v, p, "description", it.Description, false, MaxDescriptionLen)
+	switch {
+	case it.Price == nil:
+		v.add(p+".price", "missing price", `add a number, for example "price": 9.5`)
+	case math.IsNaN(*it.Price) || math.IsInf(*it.Price, 0) || *it.Price < 0 || *it.Price > MaxPrice:
+		v.add(p+".price", fmt.Sprintf("price must be a number between 0 and %d", MaxPrice),
+			"use a plain number such as 9.5, without a currency symbol")
 	}
-	if err := checkText(it.Description, "description", false, MaxDescriptionLen); err != nil {
-		return err
+	if err := checkImage(it.Image); err != nil {
+		v.add(p+".image", err.Error(),
+			`use an https:// URL or a path such as "/images/dish.jpg", or remove the field`)
 	}
-	if it.Price == nil {
-		return fmt.Errorf("missing price")
-	}
-	if p := *it.Price; math.IsNaN(p) || math.IsInf(p, 0) || p < 0 || p > MaxPrice {
-		return fmt.Errorf("price must be a number between 0 and %d", MaxPrice)
-	}
-	return checkImage(it.Image)
 }
 
 // checkText enforces length, valid UTF-8 and the absence of control and
-// formatting-override characters.
-func checkText(s, field string, required bool, maxLen int) error {
+// formatting-override characters on the text field p.field.
+func checkText(v *issues, p, field, s string, required bool, maxLen int) {
+	path := p + "." + field
 	if s == "" {
 		if required {
-			return fmt.Errorf("missing %s", field)
+			v.add(path, "missing "+field, fmt.Sprintf("add a non-empty %q", field))
 		}
-		return nil
+		return
 	}
 	if !utf8.ValidString(s) {
-		return fmt.Errorf("%s is not valid UTF-8", field)
+		v.add(path, field+" is not valid UTF-8", "save the file with UTF-8 encoding and send it again")
+		return
 	}
 	if n := utf8.RuneCountInString(s); n > maxLen {
-		return fmt.Errorf("%s is too long: %d characters (max %d)", field, n, maxLen)
+		v.add(path, fmt.Sprintf("%s is too long: %d characters (max %d)", field, n, maxLen),
+			fmt.Sprintf("shorten it to %d characters or fewer", maxLen))
 	}
 	if strings.TrimSpace(s) != s {
-		return fmt.Errorf("%s must not start or end with whitespace", field)
+		v.add(path, field+" must not start or end with whitespace", "remove the spaces at the start and end")
 	}
 	for _, r := range s {
 		if unicode.IsControl(r) || isBidiOverride(r) {
-			return fmt.Errorf("%s contains a control character (U+%04X)", field, r)
+			v.add(path, fmt.Sprintf("%s contains a control character (U+%04X)", field, r),
+				"retype the text on one line, without invisible characters")
+			return
 		}
 	}
-	return nil
+}
+
+// slug suggests a valid id from a category name, falling back to the
+// rejected id itself.
+func slug(name, id string) string {
+	for _, src := range []string{name, id} {
+		s := strings.Trim(nonSlugRe.ReplaceAllString(strings.ToLower(src), "-"), "-")
+		if len(s) > MaxIDLen {
+			s = strings.Trim(s[:MaxIDLen], "-")
+		}
+		if s != "" {
+			return s
+		}
+	}
+	return "category"
 }
 
 // isBidiOverride reports direction-override characters, which can make text
@@ -187,4 +214,39 @@ func (m *Menu) Encode() ([]byte, error) {
 		return nil, fmt.Errorf("encode menu: %w", err)
 	}
 	return append(b, '\n'), nil
+}
+
+// Summary is what a person needs to recognise a menu before publishing it.
+type Summary struct {
+	Categories []CategorySummary
+	Items      int
+	// MinPrice and MaxPrice are meaningful only when Items > 0.
+	MinPrice, MaxPrice float64
+}
+
+// CategorySummary is one category's name and size.
+type CategorySummary struct {
+	Name  string
+	Items int
+}
+
+// Summary describes a validated menu.
+func (m *Menu) Summary() Summary {
+	var s Summary
+	for _, c := range m.Categories {
+		s.Categories = append(s.Categories, CategorySummary{Name: c.Name, Items: len(c.Items)})
+		for _, it := range c.Items {
+			if it.Price == nil {
+				continue
+			}
+			if s.Items == 0 || *it.Price < s.MinPrice {
+				s.MinPrice = *it.Price
+			}
+			if s.Items == 0 || *it.Price > s.MaxPrice {
+				s.MaxPrice = *it.Price
+			}
+			s.Items++
+		}
+	}
+	return s
 }

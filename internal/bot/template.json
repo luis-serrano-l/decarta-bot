@@ -1,0 +1,46 @@
+{
+  "categories": [
+    {
+      "id": "starters",
+      "name": "Starters",
+      "description": "Something to share",
+      "items": [
+        {
+          "name": "Bruschetta",
+          "description": "Toasted bread, tomato, basil",
+          "price": 6.5
+        },
+        {
+          "name": "Soup of the day",
+          "price": 5
+        }
+      ]
+    },
+    {
+      "id": "mains",
+      "name": "Main dishes",
+      "items": [
+        {
+          "name": "Grilled sea bass",
+          "description": "With lemon and seasonal vegetables",
+          "price": 18.9
+        },
+        {
+          "name": "Mushroom risotto",
+          "description": "Vegetarian",
+          "price": 14
+        }
+      ]
+    },
+    {
+      "id": "desserts",
+      "name": "Desserts",
+      "items": [
+        {
+          "name": "Tiramisu",
+          "price": 6
+        }
+      ]
+    }
+  ]
+}

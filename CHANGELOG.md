@@ -1,11 +1,53 @@
 # Changelog
 
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [Unreleased]
 
-Hardening for the open source release. This is a breaking release.
+This will be a breaking release: menus move to the site repository, every
+menu address changes, and the configuration is different. Start from a
+fresh `.env.example`.
+
+### Added
+
+- Preview before publishing: a valid menu gets a summary (categories,
+  item count, price range) with **Publish** and **Cancel** buttons, and is
+  published only on confirmation. The confirmation carries an **Open my
+  menu** button and says that the page updates in about a minute.
+- `/delete` unpublishes a menu after a confirmation button.
+- `/link` returns the menu address (`/myurl` and `/menuurl` remain as
+  aliases).
+- `/template` sends an example `menu.json` as a file.
+- `/start` explains the bot in three lines with **Get a template** and
+  **How it works** buttons.
+- The command menu is registered with Telegram at startup.
+- The bot shows "typing…" while it downloads, checks, publishes or
+  deletes.
+- Validation reports every problem with its exact field path and a fix,
+  at most five per message.
+- The list format accepts its keywords in any letter case.
+- Upload rate limit: 20 menus checked per user per 10 minutes, separate
+  from the publish limit.
+- Documentation organised by Diátaxis under `docs/`: a tutorial, how-to
+  guides, reference (including a JSON Schema) and explanation (design and
+  threat model). `CONTRIBUTING.md`.
+- Upload cap (`MAX_UPLOAD_BYTES`, 256 KB) and publish rate limit
+  (`PUBLISH_RATE_LIMIT` per `PUBLISH_RATE_WINDOW`, 5 per hour).
+- Strict validation: unknown JSON fields rejected, string lengths and item
+  counts capped, image URLs restricted to https or site-relative paths.
+- `compose.yaml`, a complete `.env.example`, CI, Dependabot, `SECURITY.md`.
 
 ### Changed
 
+- Sending a menu no longer publishes it immediately; see the preview
+  above. The publish rate limit is counted at confirmation, so previews
+  and rejected menus do not use it up, and the reply says when to retry.
+- `/status` and `/myid` are available to everyone (previously
+  administrators only). `/status` reports the caller's access and menu.
+- Ordinary chat messages get a hint instead of a list of syntax errors.
 - Menus are published to the site repository as `static/menus/<id>.json`
   through the GitHub Contents API (`GITHUB_TOKEN`, `GITHUB_REPO`,
   `GITHUB_BRANCH`). The bot no longer serves menus over HTTP.
@@ -22,14 +64,6 @@ Hardening for the open source release. This is a breaking release.
 - The container image is distroless, non-root, read-only and pinned by
   digest, with a `HEALTHCHECK`.
 
-### Added
-
-- Upload cap (`MAX_UPLOAD_BYTES`, 256 KB) and publish rate limit
-  (`PUBLISH_RATE_LIMIT` per `PUBLISH_RATE_WINDOW`, 5 per hour).
-- Strict validation: unknown JSON fields rejected, string lengths and item
-  counts capped, image URLs restricted to https or site-relative paths.
-- `compose.yaml`, a complete `.env.example`, CI, Dependabot, `SECURITY.md`.
-
 ### Removed
 
 - `/api/debug`, every `/api/*` menu endpoint, `/webhook` and the CORS
@@ -39,22 +73,28 @@ Hardening for the open source release. This is a breaking release.
   repository is now the source of truth.
 - `cmd/check_db`, `cmd/clear_webhook`, `cmd/get_hash`, `cmd/test_token`.
 - The gin and lib/pq dependencies.
+- Hosting-specific deployment and tunnelling guides.
 
-## [v0.1.0] - 2025-11-27
+### Security
 
-### Key Features
+- `HASH_SECRET` is mandatory, with no default; menu ids cannot be turned
+  back into Telegram user IDs without it.
+- Tokens are redacted from all log output, and users are identified in
+  logs only by menu id.
+- Confirmation buttons are single-use, bound to their user and expire
+  after 15 minutes.
 
-**Development:** Polling mode (default) - bot polls Telegram API every 60s. Webhook mode available for production.
+## [0.1.0] - 2025-11-27
 
-**Endpoints:**
-- `POST /webhook` - Telegram updates (production)
-- `GET /api/meals.json` - Serves meals data
-- `GET /api/menu.json` - Serves menu data
-- `GET /health` - Health check
+### Added
 
-**Storage:** File-based in `./storage/`. Validates JSON schema (required fields: name, price, description) before saving.
+- Telegram bot with polling mode for development and webhook mode for
+  production.
+- HTTP endpoints: `POST /webhook`, `GET /api/meals.json`,
+  `GET /api/menu.json`, `GET /health`.
+- File-based storage in `./storage/`, with validation of the required
+  fields (name, price, description) before saving.
+- Authorisation through `ALLOWED_USER_IDS`; only `meals.json` and
+  `menu.json` files accepted.
 
-**Security:** User authorization via `ALLOWED_USER_IDS`. Only `meals.json` and `menu.json` files accepted.
-
-**Status:** ✅ Functional for local development. 🚧 Hugo integration and production deployment pending.
-
+[Unreleased]: https://github.com/luis-serrano-l/demenu_bot/commits/main

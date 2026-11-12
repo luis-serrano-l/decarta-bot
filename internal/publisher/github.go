@@ -26,9 +26,12 @@ const (
 	// MenuDir is the directory in the site repository that holds menus.
 	MenuDir = "static/menus"
 
-	userAgent       = "demenu-bot"
-	apiVersion      = "2022-11-28"
-	maxResponseSize = 1 << 20
+	userAgent  = "demenu-bot"
+	apiVersion = "2022-11-28"
+	// maxResponseSize must hold a Contents API reply for an existing menu:
+	// GitHub inlines files up to 1 MB as base64 (about 1.4 MB of JSON), and
+	// a truncated reply would make that menu impossible to update.
+	maxResponseSize = 4 << 20
 	maxAttempts     = 2
 )
 
@@ -38,7 +41,8 @@ var (
 )
 
 // GitHub publishes menus as static/menus/<id>.json in a repository through
-// the Contents API. Each publish is one commit on the configured branch.
+// the Contents API. Each publish or delete is one commit on the configured
+// branch.
 //
 // The token needs only "Contents: read and write" on that single repository
 // (a fine-grained personal access token); it is sent in the Authorization
@@ -115,6 +119,57 @@ func (g *GitHub) Publish(ctx context.Context, id string, content []byte) error {
 			return err
 		}
 	}
+	return err
+}
+
+// Delete removes static/menus/<id>.json in one commit. It returns
+// ErrNotFound if the file does not exist.
+func (g *GitHub) Delete(ctx context.Context, id string) error {
+	if !menuid.Valid(id) {
+		return ErrInvalidID
+	}
+	endpoint := fmt.Sprintf("%s/repos/%s/contents/%s/%s.json", g.api, g.repo, MenuDir, id)
+
+	var err error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		var sha string
+		sha, err = g.currentSHA(ctx, endpoint)
+		if err != nil {
+			return err
+		}
+		if sha == "" {
+			// GitHub also answers 404 for a wrong repository or branch and
+			// for a token without access. Only a missing file is "nothing
+			// to delete"; the rest must not look like success.
+			if err := g.checkBranch(ctx); err != nil {
+				return err
+			}
+			return ErrNotFound
+		}
+		var payload []byte
+		payload, err = json.Marshal(struct {
+			Message string `json:"message"`
+			Branch  string `json:"branch"`
+			SHA     string `json:"sha"`
+		}{Message: "menu: delete " + id, Branch: g.branch, SHA: sha})
+		if err != nil {
+			return fmt.Errorf("github: encode request: %w", err)
+		}
+		_, err = g.do(ctx, http.MethodDelete, endpoint, payload)
+		// As in Publish: a 409 means the branch moved; re-read and retry once.
+		var se *statusError
+		if !errors.As(err, &se) || se.code != http.StatusConflict {
+			return err
+		}
+	}
+	return err
+}
+
+// checkBranch confirms that the configured repository and branch exist and
+// are readable with the token.
+func (g *GitHub) checkBranch(ctx context.Context) error {
+	u := fmt.Sprintf("%s/repos/%s/branches/%s", g.api, g.repo, url.PathEscape(g.branch))
+	_, err := g.do(ctx, http.MethodGet, u, nil)
 	return err
 }
 

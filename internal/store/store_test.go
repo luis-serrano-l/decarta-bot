@@ -50,6 +50,28 @@ func TestFileSaveAndHas(t *testing.T) {
 	}
 }
 
+func TestFileDelete(t *testing.T) {
+	s, err := NewFile(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Delete(id); err != nil {
+		t.Errorf("Delete() of a missing copy = %v, want nil", err)
+	}
+	if err := s.Save(id, []byte("x")); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Delete(id); err != nil {
+		t.Fatal(err)
+	}
+	if s.Has(id) {
+		t.Error("Has() = true after Delete")
+	}
+	if err := s.Delete("../../../etc/pwd0"); !errors.Is(err, ErrInvalidID) {
+		t.Errorf("Delete(bad id) error = %v, want ErrInvalidID", err)
+	}
+}
+
 func TestFileRejectsBadIDs(t *testing.T) {
 	s, err := NewFile(t.TempDir())
 	if err != nil {

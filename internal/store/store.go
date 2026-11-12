@@ -22,6 +22,8 @@ var ErrInvalidID = errors.New("store: invalid menu id")
 type Store interface {
 	Save(id string, content []byte) error
 	Has(id string) bool
+	// Delete removes the copy for id; it is not an error if there is none.
+	Delete(id string) error
 }
 
 // File is a Store backed by a directory with one <id>.json per menu.
@@ -75,6 +77,18 @@ func (f *File) Has(id string) bool {
 	}
 	info, err := os.Stat(path)
 	return err == nil && info.Mode().IsRegular()
+}
+
+// Delete removes the stored copy for id, if any.
+func (f *File) Delete(id string) error {
+	path, err := f.path(id)
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("store: remove: %w", err)
+	}
+	return nil
 }
 
 // path maps an id to its file. Ids are restricted to base62, so the result
