@@ -40,7 +40,7 @@ type Config struct {
 	SiteBaseURL string // HUGO_BASE_URL, without trailing slash
 
 	AllowedUserIDs []int64 // ALLOWED_USER_IDS: may publish
-	AdminUserIDs   []int64 // ADMIN_USER_IDS: may publish, use admin commands, receive access requests
+	AdminUserIDs   []int64 // ADMIN_USER_IDS: may publish, receive access requests
 
 	StoragePath    string        // STORAGE_PATH
 	Port           int           // PORT

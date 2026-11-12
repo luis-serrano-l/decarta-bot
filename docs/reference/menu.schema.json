@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/luis-serrano-l/demenu_bot/blob/main/docs/reference/menu.schema.json",
+  "title": "Demenu menu",
+  "description": "A restaurant menu as accepted by demenu_bot and published as static/menus/<id>.json. The bot additionally requires category ids to be unique, and rejects text with leading or trailing whitespace, control characters or text-direction overrides.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["categories"],
+  "properties": {
+    "categories": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": { "$ref": "#/$defs/category" }
+    }
+  },
+  "$defs": {
+    "category": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "items"],
+      "properties": {
+        "id": {
+          "description": "Slug used by the site for filtering. Unique within the menu.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 500 },
+        "items": {
+          "type": "array",
+          "maxItems": 200,
+          "items": { "$ref": "#/$defs/item" }
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "price"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 500 },
+        "price": { "type": "number", "minimum": 0, "maximum": 1000000 },
+        "image": {
+          "description": "An https:// URL, or a site-relative path such as /images/soup.jpg.",
+          "type": "string",
+          "maxLength": 2048,
+          "pattern": "^(https://[^\\s\\\\]+|/[^\\s\\\\]*)$"
+        }
+      }
+    }
+  }
+}
