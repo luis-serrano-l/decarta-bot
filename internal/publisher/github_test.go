@@ -34,6 +34,9 @@ type fakeGitHub struct {
 	getStatus int // if non-zero, GET fails with this status
 	putStatus int // if non-zero, PUT and DELETE fail with this status
 	conflicts int // number of PUTs or DELETEs to answer with 409 before succeeding
+
+	branchMissing bool // the repository or branch does not exist: every GET is a 404
+	branchChecks  int
 }
 
 type putBody struct {
@@ -59,6 +62,15 @@ func (f *fakeGitHub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(r.URL.String(), testToken) {
 		f.t.Error("token appeared in the request URL")
 	}
+	if r.URL.Path == "/repos/"+testRepo+"/branches/"+testBranch && r.Method == http.MethodGet {
+		f.branchChecks++
+		if f.branchMissing {
+			writeErr(w, http.StatusNotFound, "Branch not found")
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"name": testBranch})
+		return
+	}
 	if r.URL.Path != testPath {
 		f.t.Errorf("path = %q, want %q", r.URL.Path, testPath)
 	}
@@ -72,7 +84,7 @@ func (f *fakeGitHub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case f.getStatus != 0:
 			writeErr(w, f.getStatus, "get failed")
-		case f.content == nil:
+		case f.content == nil || f.branchMissing:
 			writeErr(w, http.StatusNotFound, "Not Found")
 		default:
 			writeJSON(w, http.StatusOK, map[string]string{"type": "file", "sha": blobSHA(f.content)})
@@ -327,7 +339,9 @@ func TestGitHubDelete(t *testing.T) {
 		wantIs      error
 		wantDeletes int
 		wantGone    bool
+		noBranch    bool
 	}{
+		{name: "wrong repository or branch is not mistaken for nothing published", id: testID, existing: []byte("old"), noBranch: true, wantErr: "check GITHUB_REPO, GITHUB_BRANCH"},
 		{name: "deletes an existing file", id: testID, existing: []byte("old"), wantDeletes: 1, wantGone: true},
 		{name: "nothing published", id: testID, wantIs: ErrNotFound, wantGone: true},
 		{name: "retries once on conflict", id: testID, existing: []byte("old"), conflicts: 1, wantDeletes: 2, wantGone: true},
@@ -338,7 +352,7 @@ func TestGitHubDelete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fake := &fakeGitHub{t: t, content: tt.existing, getStatus: tt.getStatus, putStatus: tt.delStatus, conflicts: tt.conflicts}
+			fake := &fakeGitHub{t: t, content: tt.existing, getStatus: tt.getStatus, putStatus: tt.delStatus, conflicts: tt.conflicts, branchMissing: tt.noBranch}
 			srv := httptest.NewServer(fake)
 			defer srv.Close()
 

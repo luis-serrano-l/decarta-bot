@@ -26,9 +26,12 @@ const (
 	// MenuDir is the directory in the site repository that holds menus.
 	MenuDir = "static/menus"
 
-	userAgent       = "demenu-bot"
-	apiVersion      = "2022-11-28"
-	maxResponseSize = 1 << 20
+	userAgent  = "demenu-bot"
+	apiVersion = "2022-11-28"
+	// maxResponseSize must hold a Contents API reply for an existing menu:
+	// GitHub inlines files up to 1 MB as base64 (about 1.4 MB of JSON), and
+	// a truncated reply would make that menu impossible to update.
+	maxResponseSize = 4 << 20
 	maxAttempts     = 2
 )
 
@@ -135,6 +138,12 @@ func (g *GitHub) Delete(ctx context.Context, id string) error {
 			return err
 		}
 		if sha == "" {
+			// GitHub also answers 404 for a wrong repository or branch and
+			// for a token without access. Only a missing file is "nothing
+			// to delete"; the rest must not look like success.
+			if err := g.checkBranch(ctx); err != nil {
+				return err
+			}
 			return ErrNotFound
 		}
 		var payload []byte
@@ -153,6 +162,14 @@ func (g *GitHub) Delete(ctx context.Context, id string) error {
 			return err
 		}
 	}
+	return err
+}
+
+// checkBranch confirms that the configured repository and branch exist and
+// are readable with the token.
+func (g *GitHub) checkBranch(ctx context.Context) error {
+	u := fmt.Sprintf("%s/repos/%s/branches/%s", g.api, g.repo, url.PathEscape(g.branch))
+	_, err := g.do(ctx, http.MethodGet, u, nil)
 	return err
 }
 
