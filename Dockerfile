@@ -1,41 +1,31 @@
-# Build stage
-FROM golang:1.23-alpine AS builder
+# Build stage. Base images are pinned by digest; Dependabot proposes updates.
+FROM golang:1.27.4-alpine@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS build
 
-# Install build dependencies
-RUN apk add --no-cache git
+WORKDIR /src
 
-# Set working directory
-WORKDIR /app
-
-# Copy go mod files
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod download && go mod verify
 
-# Copy source code
 COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/demenu_bot . \
+    && mkdir /out/data
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o demenu_bot .
+# Runtime stage: no shell, no package manager, CA certificates included.
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:25ac8f0c3b2334a9eb05452266bd4697864a8c8ef0ef71e5e6480d7f92868329
 
-# Final stage
-FROM alpine:latest
+COPY --from=build /out/demenu_bot /usr/local/bin/demenu_bot
+# Owned by the runtime user so that a named volume mounted here is writable.
+COPY --from=build --chown=65532:65532 /out/data /data
 
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
+ENV STORAGE_PATH=/data \
+    PORT=8080
 
-WORKDIR /app
-
-# Copy the binary from builder
-COPY --from=builder /app/demenu_bot .
-
-# Create storage directory
-RUN mkdir -p /app/storage
-
-# Expose port (default 8080, can be overridden with PORT env var)
+USER 65532:65532
+VOLUME ["/data"]
 EXPOSE 8080
 
-# Run the application
-CMD ["./demenu_bot"]
+# The image has no curl or wget, so the binary probes its own /health.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD ["/usr/local/bin/demenu_bot", "-healthcheck"]
 
-
-
+ENTRYPOINT ["/usr/local/bin/demenu_bot"]
