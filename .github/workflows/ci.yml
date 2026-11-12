@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+      - name: go vet
+        run: go vet ./...
+      - name: go mod tidy is a no-op
+        run: go mod tidy -diff
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.15.0
+          # Built with the Go version of this module, which may be newer
+          # than the one the released binary was built with.
+          install-mode: goinstall
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: go test -race
+        run: go test -race -count=1 ./...
+
+  govulncheck:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Write a dummy .env
+        run: |
+          {
+            echo "TELEGRAM_BOT_TOKEN=0000000000:dummy-token-for-ci"
+            echo "HASH_SECRET=$(openssl rand -hex 32)"
+            echo "GITHUB_TOKEN=dummy-token-for-ci"
+            echo "GITHUB_REPO=example/example"
+            echo "HUGO_BASE_URL=https://example.github.io/demenu"
+          } > .env
+      - name: Build the image
+        run: docker compose build
+      - name: Start and wait for a healthy container
+        run: docker compose up --detach --wait --wait-timeout 120
+      - name: Check the runtime hardening
+        run: |
+          id="$(docker compose ps -q bot)"
+          docker inspect --format \
+            'user={{.Config.User}} read_only={{.HostConfig.ReadonlyRootfs}} health={{.State.Health.Status}}' \
+            "$id" | tee /tmp/inspect.txt
+          grep -qx 'user=65532:65532 read_only=true health=healthy' /tmp/inspect.txt
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color
+      - name: Stop
+        if: always()
+        run: docker compose down --volumes
