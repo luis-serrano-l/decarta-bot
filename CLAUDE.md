@@ -12,7 +12,7 @@ go test -race ./...                 # tests
 gofmt -l . && go vet ./...          # format check + vet
 golangci-lint run                   # lint (v2, config in .golangci.yml)
 govulncheck ./...                   # known-vulnerability scan
-docker compose up --build --wait    # container, waits for HEALTHCHECK
+docker compose up --build --wait    # container (needs .env), waits for HEALTHCHECK
 ```
 
 ## Architecture
