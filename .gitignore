@@ -1,48 +1,26 @@
 # Binaries
+/demenu_bot
 *.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-demenu_bot
-
-# Test binary
 *.test
 
-# Output of the go coverage tool
+# Coverage
 *.out
 coverage.*
-*.coverprofile
-profile.cov
 
-# Dependency directories
-vendor/
-
-# Go workspace file
+# Go workspace
 go.work
 go.work.sum
 
-# Environment variables
+# Secrets and local configuration
 .env
-.env.local
+.env.*
+!.env.example
 
-# Storage directory (contains user-uploaded JSON files)
-# Ignore example JSON files but allow carta_*.json files (user-specific menus)
-storage/*.json
-!storage/carta_*.json
-storage/message_refs.go
+# Local copies of published menus
+/data/
 
-# IDE
+# IDE and OS
 .idea/
 .vscode/
 *.swp
-*.swo
-*~
-
-# OS
 .DS_Store
-Thumbs.db
-
-# Air (hot reload tool)
-tmp/
-build-errors.log
