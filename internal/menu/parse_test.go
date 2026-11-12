@@ -50,6 +50,7 @@ func TestParseListCases(t *testing.T) {
 		wantErr string
 	}{
 		{"without dashes", "CATEGORY: A\nITEM: x\nPRICE: 1", []string{"a"}, ""},
+		{"lowercase keywords", "category: A\n- item: x\n  Price: 1\n  description: d", []string{"a"}, ""},
 		{"CRLF line endings", "CATEGORY: A\r\n- ITEM: x\r\n  PRICE: 1\r\n", []string{"a"}, ""},
 		{"colon in value", "CATEGORY: Soups: hot\n- ITEM: x\n  PRICE: 1", []string{"soups-hot"}, ""},
 		{"duplicate names get suffixed ids", "CATEGORY: A\nCATEGORY: A\nCATEGORY: a!", []string{"a", "a-1", "a-2"}, ""},

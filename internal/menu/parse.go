@@ -251,7 +251,8 @@ var nonSlugRe = regexp.MustCompile(`[^a-z0-9]+`)
 //	  PRICE: 12.99
 //	  DESCRIPTION: Classic tomato basil
 //
-// Blank lines are ignored and the leading "- " is optional. Category ids are
+// Blank lines are ignored, the leading "- " is optional and the keywords may
+// be in any case. Category ids are
 // derived from the names. Problems are reported by line number. It does not
 // validate the result beyond what only the list form can locate.
 func ParseList(text string) (*Menu, error) {
@@ -287,7 +288,7 @@ func ParseList(text string) (*Menu, error) {
 			v.add(where, expected, expectedFix)
 			continue
 		}
-		switch strings.TrimSpace(key) {
+		switch strings.ToUpper(strings.TrimSpace(key)) {
 		case "CATEGORY":
 			closeItem()
 			if value == "" {
