@@ -45,7 +45,7 @@ The bot needs permission to commit to your site, and to nothing else.
 
 1. Open
    [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new).
-2. **Token name**: `demenu_bot`. **Expiration**: 90 days is a good start.
+2. **Token name**: `demenu-bot`. **Expiration**: 90 days is a good start.
 3. **Repository access**: **Only select repositories**, then pick
    `<you>/demenu`.
 4. **Permissions → Repository permissions → Contents**: **Read and write**.
@@ -56,8 +56,8 @@ The bot needs permission to commit to your site, and to nothing else.
 ## 4. Configure the bot
 
 ```bash
-git clone https://github.com/luis-serrano-l/demenu_bot.git
-cd demenu_bot
+git clone https://github.com/luis-serrano-l/demenu-bot.git
+cd demenu-bot
 cp .env.example .env
 openssl rand -hex 32
 ```

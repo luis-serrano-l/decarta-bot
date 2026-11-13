@@ -7,13 +7,13 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/demenu_bot . \
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/demenu-bot . \
     && mkdir /out/data
 
 # Runtime stage: no shell, no package manager, CA certificates included.
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:aafe993665bf6200db38a02c11a9351e782a84b6a45e7f33b6695638c88e3931
 
-COPY --from=build /out/demenu_bot /usr/local/bin/demenu_bot
+COPY --from=build /out/demenu-bot /usr/local/bin/demenu-bot
 # Owned by the runtime user so that a named volume mounted here is writable.
 COPY --from=build --chown=65532:65532 /out/data /data
 
@@ -26,6 +26,6 @@ EXPOSE 8080
 
 # The image has no curl or wget, so the binary probes its own /health.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD ["/usr/local/bin/demenu_bot", "-healthcheck"]
+    CMD ["/usr/local/bin/demenu-bot", "-healthcheck"]
 
-ENTRYPOINT ["/usr/local/bin/demenu_bot"]
+ENTRYPOINT ["/usr/local/bin/demenu-bot"]

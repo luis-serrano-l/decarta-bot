@@ -21,7 +21,7 @@ Menus themselves are public by design and are not confidential.
 ```mermaid
 flowchart LR
     U["Telegram users<br/>(untrusted)"] --> T["Telegram<br/>(trusted for identity)"]
-    T -->|"updates, pulled by the bot"| B["demenu_bot<br/>(trusted)"]
+    T -->|"updates, pulled by the bot"| B["demenu-bot<br/>(trusted)"]
     B -->|"validated JSON only"| G["GitHub site repo"]
     G --> P["Public site<br/>(anyone)"]
     O["Operator<br/>(.env, host)"] --> B

@@ -9,8 +9,8 @@ welcome. For a vulnerability, do not open an issue: see
 You need Go 1.26 or newer. Docker is only needed for the container check.
 
 ```bash
-git clone https://github.com/luis-serrano-l/demenu_bot.git
-cd demenu_bot
+git clone https://github.com/luis-serrano-l/demenu-bot.git
+cd demenu-bot
 go test -race ./...
 ```
 
