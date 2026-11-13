@@ -8,9 +8,21 @@ description: |
   Publish, commits it to a static site repository that serves the menu
   page. /qr returns a QR code of the page for the tables.
 
-  The snap runs the bot as a service. It is installed stopped: write the
-  configuration to /var/snap/decarta-bot/common/.env, then run
-  "sudo snap start --enable decarta-bot".
+  The snap runs the bot as a service. It is installed stopped, because
+  it needs a configuration first. Write it to
+  /var/snap/decarta-bot/common/.env, then start the service.
+
+  **Commands**
+
+      sudo snap start --enable decarta-bot    # start now and at every boot
+      sudo snap restart decarta-bot           # after changing .env
+      sudo snap stop --disable decarta-bot    # stop and keep it stopped
+      sudo snap logs -f decarta-bot           # follow the log
+      snap services decarta-bot               # is it running?
+      snap run decarta-bot --version          # which version is installed
+
+  The variables for .env and the full guide are at
+  https://github.com/luis-serrano-l/decarta-bot/blob/main/docs/how-to/run-as-snap.md
 license: MIT
 website: https://github.com/luis-serrano-l/decarta-bot
 source-code: https://github.com/luis-serrano-l/decarta-bot
