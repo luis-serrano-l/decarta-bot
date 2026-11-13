@@ -53,6 +53,10 @@ jobs:
           go-version-file: go.mod
       - name: go test -race
         run: go test -race -count=1 ./...
+      # A short pass on every run; a failing input is saved under
+      # internal/menu/testdata/fuzz and then runs as a normal test.
+      - name: Fuzz the menu parser
+        run: go test -run='^$' -fuzz=FuzzParse -fuzztime=30s ./internal/menu
 
   govulncheck:
     runs-on: ubuntu-24.04

@@ -44,6 +44,7 @@ type fakeTelegram struct {
 	commands   []string            // registered with setMyCommands
 	markups    map[int64][]string  // reply_markup of each message or edit, per chat
 	docs       map[int64][]sentDoc // files sent with sendDocument
+	photos     map[int64][]sentDoc // images sent with sendPhoto
 	answered   int                 // answerCallbackQuery calls
 	typing     int                 // sendChatAction calls
 }
@@ -159,6 +160,20 @@ func (f *fakeTelegram) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			f.docs = map[int64][]sentDoc{}
 		}
 		f.docs[chatID] = append(f.docs[chatID], sentDoc{header.Filename, content, r.Form.Get("caption")})
+		f.nextMsgID++
+		f.ok(w, message(f.nextMsgID))
+	case "sendPhoto":
+		file, header, err := r.FormFile("photo")
+		if err != nil {
+			f.t.Errorf("sendPhoto without a photo: %v", err)
+			http.Error(w, "no photo", http.StatusBadRequest)
+			return
+		}
+		content, _ := io.ReadAll(file)
+		if f.photos == nil {
+			f.photos = map[int64][]sentDoc{}
+		}
+		f.photos[chatID] = append(f.photos[chatID], sentDoc{header.Filename, content, r.Form.Get("caption")})
 		f.nextMsgID++
 		f.ok(w, message(f.nextMsgID))
 	case "setMyCommands":
@@ -310,7 +325,7 @@ func TestEndToEnd(t *testing.T) {
 	if got := strings.Join(tg.sent[strangerID], "\n"); !strings.Contains(got, "not authorised") {
 		t.Errorf("stranger replies = %q", got)
 	}
-	if want := []string{"start", "help", "template", "link", "status", "delete"}; !slices.Equal(tg.commands, want) {
+	if want := []string{"start", "help", "template", "link", "qr", "status", "delete"}; !slices.Equal(tg.commands, want) {
 		t.Errorf("registered commands = %q, want %q", tg.commands, want)
 	}
 	// Over the wire: /start carries its two callback buttons, the final
@@ -340,6 +355,31 @@ func TestEndToEnd(t *testing.T) {
 		t.Errorf("logs contain the bot token:\n%s", out)
 	}
 	assertNoRawIDs(t, out)
+}
+
+// TestSendPhotoOverTheWire checks the request the real client makes: the
+// handler tests only see the Messenger interface.
+func TestSendPhotoOverTheWire(t *testing.T) {
+	tg := &fakeTelegram{t: t}
+	srv := httptest.NewServer(tg)
+	defer srv.Close()
+	client := NewClient(fakeToken, srv.URL, slog.New(slog.DiscardHandler))
+	if err := client.connect(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	image := []byte("\x89PNG not really")
+	if err := client.SendPhoto(allowedID, "menu-qr.png", image, "scan me"); err != nil {
+		t.Fatalf("SendPhoto() = %v", err)
+	}
+	tg.mu.Lock()
+	defer tg.mu.Unlock()
+	if len(tg.photos[allowedID]) != 1 {
+		t.Fatalf("photos sent = %d, want 1", len(tg.photos[allowedID]))
+	}
+	if p := tg.photos[allowedID][0]; p.name != "menu-qr.png" || !bytes.Equal(p.content, image) || p.caption != "scan me" {
+		t.Errorf("photo = %q, %d bytes, caption %q", p.name, len(p.content), p.caption)
+	}
 }
 
 func TestRunStopsWhileAuthenticationKeepsFailing(t *testing.T) {

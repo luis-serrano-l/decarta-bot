@@ -172,6 +172,16 @@ func (c *Client) SendFile(chatID int64, name string, content []byte, caption str
 	return nil
 }
 
+// SendPhoto implements Messenger.
+func (c *Client) SendPhoto(chatID int64, name string, content []byte, caption string) error {
+	photo := tgbotapi.NewPhoto(chatID, tgbotapi.FileBytes{Name: name, Bytes: content})
+	photo.Caption = caption
+	if _, err := c.api.Send(photo); err != nil {
+		return fmt.Errorf("telegram: send photo: %w", scrub(err))
+	}
+	return nil
+}
+
 // AnswerCallback implements Messenger.
 func (c *Client) AnswerCallback(callbackID, text string) error {
 	if _, err := c.api.Request(tgbotapi.NewCallback(callbackID, text)); err != nil {

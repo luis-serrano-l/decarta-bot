@@ -94,6 +94,7 @@ Something not working? `docker compose logs bot` says why; see
 | `/help` | The commands available to you |
 | `/template` | Sends an example `menu.json` to edit and send back |
 | `/link` | The link to your menu |
+| `/qr` | A QR code of the link, to print for your tables |
 | `/status` | Your access, whether a menu is published, anything awaiting confirmation |
 | `/delete` | Unpublishes your menu, after a confirmation button |
 

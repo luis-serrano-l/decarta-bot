@@ -13,7 +13,7 @@ There are three roles:
 
 ## Commands
 
-The first six are registered with Telegram (`setMyCommands`) each time the
+The first seven are registered with Telegram (`setMyCommands`) each time the
 bot starts, so they appear in the menu next to the message box.
 
 | Command | Who | What it does |
@@ -22,6 +22,7 @@ bot starts, so they appear in the menu next to the message box.
 | `/help` | everyone | Lists the commands available to your role. |
 | `/template` | publishers | Sends `menu.json`, an example menu that is valid as it is. Edit it and send it back. |
 | `/link` | publishers | Your menu's address, with an **Open my menu** button if a menu is published. Aliases: `/myurl`, `/menuurl`. |
+| `/qr` | publishers | A QR code of your menu's address as an image, to print or show on a screen. Needs a published menu; before that it only tells you the address. |
 | `/status` | everyone | Your access level; for publishers, whether a menu is published, its address, and any preview or delete waiting for confirmation. |
 | `/delete` | publishers | Asks for confirmation, then unpublishes your menu. |
 | `/myid` | everyone | Your Telegram user ID: the number an operator puts in `ALLOWED_USER_IDS` or `ADMIN_USER_IDS`. |
@@ -51,10 +52,11 @@ downloads and checks the menu the chat shows "typing…".
 |---|---|---|
 | **Get a template** | `/start` | Same as `/template` |
 | **How it works** | `/start` | The steps from template to published page, and the list format |
-| **Publish** | A preview | Publishes the previewed menu. The message becomes "Menu published" with the link, a note that the page updates in about a minute, and **Open my menu**. |
+| **Publish** | A preview | Publishes the previewed menu. The message becomes "Menu published" with the link, a note that the page updates in about a minute, and the buttons **Open my menu** and **Get QR code**. |
 | **Cancel** | A preview or a delete question | Discards it. Nothing changes. |
 | **Yes, delete it** | `/delete` | Removes the menu from the site. The page disappears in about a minute. |
 | **Open my menu** | A published message, `/link`, `/status` | Opens the public page |
+| **Get QR code** | A published message | Same as `/qr` |
 
 Rules that apply to **Publish**, **Yes, delete it** and **Cancel**:
 
