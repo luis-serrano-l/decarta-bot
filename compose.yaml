@@ -1,13 +1,13 @@
 services:
   bot:
     build: .
-    image: demenu-bot:local
+    image: decarta-bot:local
     env_file: .env
     environment:
       # The only writable path in the container; overrides any value in .env.
       STORAGE_PATH: /data
     volumes:
-      - demenu-data:/data
+      - decarta-data:/data
     # No ports are published: the bot long-polls Telegram and /health is
     # only probed from inside the container by the image HEALTHCHECK.
     user: "65532:65532"
@@ -21,4 +21,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  demenu-data:
+  decarta-data:

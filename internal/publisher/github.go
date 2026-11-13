@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/luis-serrano-l/demenu-bot/internal/menuid"
+	"github.com/luis-serrano-l/decarta-bot/internal/menuid"
 )
 
 const (
@@ -26,7 +26,7 @@ const (
 	// MenuDir is the directory in the site repository that holds menus.
 	MenuDir = "static/menus"
 
-	userAgent  = "demenu-bot"
+	userAgent  = "decarta-bot"
 	apiVersion = "2022-11-28"
 	// maxResponseSize must hold a Contents API reply for an existing menu:
 	// GitHub inlines files up to 1 MB as base64 (about 1.4 MB of JSON), and

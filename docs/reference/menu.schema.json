@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/luis-serrano-l/demenu-bot/blob/main/docs/reference/menu.schema.json",
-  "title": "Demenu menu",
-  "description": "A restaurant menu as accepted by demenu-bot and published as static/menus/<id>.json. The bot additionally requires category ids to be unique, and rejects text with leading or trailing whitespace, control characters or text-direction overrides.",
+  "$id": "https://github.com/luis-serrano-l/decarta-bot/blob/main/docs/reference/menu.schema.json",
+  "title": "Decarta menu",
+  "description": "A restaurant menu as accepted by decarta-bot and published as static/menus/<id>.json. The bot additionally requires category ids to be unique, and rejects text with leading or trailing whitespace, control characters or text-direction overrides.",
   "type": "object",
   "additionalProperties": false,
   "required": ["categories"],

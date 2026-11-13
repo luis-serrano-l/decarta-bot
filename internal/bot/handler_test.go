@@ -17,15 +17,15 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"github.com/luis-serrano-l/demenu-bot/internal/menu"
-	"github.com/luis-serrano-l/demenu-bot/internal/menuid"
-	"github.com/luis-serrano-l/demenu-bot/internal/publisher"
-	"github.com/luis-serrano-l/demenu-bot/internal/ratelimit"
+	"github.com/luis-serrano-l/decarta-bot/internal/menu"
+	"github.com/luis-serrano-l/decarta-bot/internal/menuid"
+	"github.com/luis-serrano-l/decarta-bot/internal/publisher"
+	"github.com/luis-serrano-l/decarta-bot/internal/ratelimit"
 )
 
 const (
 	testSecret = "0123456789abcdef0123456789abcdef"
-	siteURL    = "https://example.github.io/demenu"
+	siteURL    = "https://example.github.io/decarta-site"
 
 	adminID    int64 = 1000000001
 	allowedID  int64 = 1000000002
@@ -1077,7 +1077,7 @@ func TestCommands(t *testing.T) {
 		{"link as stranger", strangerID, "/link", "not authorised", siteURL},
 		{"request_access when already allowed", allowedID, "/request_access", "already have access", ""},
 		{"unknown command", allowedID, "/nope", "Unknown command", ""},
-		{"command with bot suffix and args", adminID, "/status@demenu-bot now", "Bot: running", ""},
+		{"command with bot suffix and args", adminID, "/status@decarta-bot now", "Bot: running", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

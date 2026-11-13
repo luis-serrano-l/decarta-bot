@@ -14,7 +14,7 @@ serve menus at all. It is a validating front door to a git repository:
 sequenceDiagram
     actor O as Owner
     participant T as Telegram
-    participant B as demenu-bot
+    participant B as decarta-bot
     participant G as GitHub (site repo)
     participant P as GitHub Pages
     O->>T: menu.json

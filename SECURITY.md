@@ -8,7 +8,7 @@ branches yet.
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately through
-[GitHub security advisories](https://github.com/luis-serrano-l/demenu-bot/security/advisories/new),
+[GitHub security advisories](https://github.com/luis-serrano-l/decarta-bot/security/advisories/new),
 not in a public issue. Include what you did, what happened and what you
 expected; a failing test or a menu file that triggers the problem is
 ideal. Never include real tokens.
@@ -26,7 +26,7 @@ down with a crafted message.
 Out of scope: what an authorised publisher writes in their own menu,
 attacks that need access to the host or to `.env`, and problems in
 Telegram, GitHub or the companion site (report those to
-[luis-serrano-l/demenu](https://github.com/luis-serrano-l/demenu)).
+[luis-serrano-l/decarta-site](https://github.com/luis-serrano-l/decarta-site)).
 
 ## Security model in brief
 

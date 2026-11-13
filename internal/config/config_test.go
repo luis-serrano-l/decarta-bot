@@ -19,7 +19,7 @@ func baseEnv() map[string]string {
 		"HASH_SECRET":        goodSecret,
 		"GITHUB_TOKEN":       ghToken,
 		"GITHUB_REPO":        "owner/site",
-		"HUGO_BASE_URL":      "https://example.github.io/demenu/",
+		"HUGO_BASE_URL":      "https://example.github.io/decarta-site/",
 	}
 }
 
@@ -38,7 +38,7 @@ func TestLoadDefaults(t *testing.T) {
 		GitHubToken:    ghToken,
 		GitHubRepo:     "owner/site",
 		GitHubBranch:   "main",
-		SiteBaseURL:    "https://example.github.io/demenu",
+		SiteBaseURL:    "https://example.github.io/decarta-site",
 		StoragePath:    "./data",
 		Port:           8080,
 		MaxUploadBytes: 256 * 1024,
@@ -92,7 +92,7 @@ func TestLoadErrors(t *testing.T) {
 		{"missing github repo", "GITHUB_REPO", "", "GITHUB_REPO is required"},
 		{"missing base url", "HUGO_BASE_URL", "", "HUGO_BASE_URL: is required"},
 		{"plain http base url", "HUGO_BASE_URL", "http://example.com", "must use https"},
-		{"relative base url", "HUGO_BASE_URL", "/demenu", "absolute URL"},
+		{"relative base url", "HUGO_BASE_URL", "/decarta-site", "absolute URL"},
 		{"base url with credentials", "HUGO_BASE_URL", "https://u:p@example.com", "absolute URL"},
 		{"base url with query", "HUGO_BASE_URL", "https://example.com/?x=1", "absolute URL"},
 		{"non-numeric allowed id", "ALLOWED_USER_IDS", "1,abc", "ALLOWED_USER_IDS"},

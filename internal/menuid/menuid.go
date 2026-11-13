@@ -32,7 +32,7 @@ const (
 	alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 	// domain separates this use of the secret from any other HMAC made with it.
-	domain = "demenu/menu-id/v1\x00"
+	domain = "decarta/menu-id/v1\x00"
 )
 
 // ErrWeakSecret is returned by New when the secret is too short or is a

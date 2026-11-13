@@ -6,7 +6,7 @@ the end you will have:
 
 - your own menu site on GitHub Pages,
 - your own Telegram bot, running in Docker on your machine,
-- a published menu at `https://<you>.github.io/demenu/menu/<id>`.
+- a published menu at `https://<you>.github.io/decarta-site/menu/<id>`.
 
 You need [Docker](https://docs.docker.com/get-docker/) with Compose, `git`,
 a GitHub account and a Telegram account. Replace `<you>` with your GitHub
@@ -17,15 +17,15 @@ username throughout.
 The bot does not serve web pages. It writes menu files into a second
 repository, the site, and GitHub Pages serves them.
 
-1. Open [luis-serrano-l/demenu](https://github.com/luis-serrano-l/demenu)
-   and click **Fork**. Keep the name `demenu`.
+1. Open [luis-serrano-l/decarta-site](https://github.com/luis-serrano-l/decarta-site)
+   and click **Fork**. Keep the name `decarta-site`.
 2. In your fork, open **Settings → Pages**. Under **Build and deployment**,
    set **Source** to **GitHub Actions**.
 3. Open the **Actions** tab. GitHub disables workflows on new forks, so
    click the button to enable them.
 4. Select **Deploy Hugo site to Pages** and click **Run workflow**.
 
-When the run turns green, open `https://<you>.github.io/demenu`. You should
+When the run turns green, open `https://<you>.github.io/decarta-site`. You should
 see the demo site.
 
 ## 2. Create the Telegram bot
@@ -45,9 +45,9 @@ The bot needs permission to commit to your site, and to nothing else.
 
 1. Open
    [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new).
-2. **Token name**: `demenu-bot`. **Expiration**: 90 days is a good start.
+2. **Token name**: `decarta-bot`. **Expiration**: 90 days is a good start.
 3. **Repository access**: **Only select repositories**, then pick
-   `<you>/demenu`.
+   `<you>/decarta-site`.
 4. **Permissions → Repository permissions → Contents**: **Read and write**.
    GitHub adds **Metadata: Read-only** by itself. Leave everything else
    alone.
@@ -56,8 +56,8 @@ The bot needs permission to commit to your site, and to nothing else.
 ## 4. Configure the bot
 
 ```bash
-git clone https://github.com/luis-serrano-l/demenu-bot.git
-cd demenu-bot
+git clone https://github.com/luis-serrano-l/decarta-bot.git
+cd decarta-bot
 cp .env.example .env
 openssl rand -hex 32
 ```
@@ -69,8 +69,8 @@ fill in these five lines:
 TELEGRAM_BOT_TOKEN=<the token from BotFather>
 HASH_SECRET=<the 64 characters you just generated>
 GITHUB_TOKEN=<the token from GitHub>
-GITHUB_REPO=<you>/demenu
-HUGO_BASE_URL=https://<you>.github.io/demenu
+GITHUB_REPO=<you>/decarta-site
+HUGO_BASE_URL=https://<you>.github.io/decarta-site
 ```
 
 Leave the rest as it is.

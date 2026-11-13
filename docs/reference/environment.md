@@ -61,4 +61,4 @@ These are not configurable:
 `telegram` is `"connecting"` until Telegram has accepted the token. The
 endpoint reports liveness, so it stays `200` while the bot retries a bad
 token: restarting the container would not fix that. The image's
-`HEALTHCHECK` calls it through `demenu-bot -healthcheck`.
+`HEALTHCHECK` calls it through `decarta-bot -healthcheck`.

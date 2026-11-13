@@ -43,9 +43,10 @@ fresh `.env.example`.
 ### Changed
 
 - The project, repository, Go module, binary and Docker image are renamed
-  from `demenu_bot` to `demenu-bot`. With Docker Compose the data volume
-  becomes `demenu-bot_demenu-data`; copy an existing volume across before
-  upgrading.
+  from `demenu_bot` to `decarta-bot`, and the site repository from `demenu`
+  to `decarta-site`: update `GITHUB_REPO` and `HUGO_BASE_URL`. With Docker
+  Compose the data volume becomes `decarta-bot_decarta-data`; copy an
+  existing volume across before upgrading.
 - Sending a menu no longer publishes it immediately; see the preview
   above. The publish rate limit is counted at confirmation, so previews
   and rejected menus do not use it up, and the reply says when to retry.
@@ -101,4 +102,4 @@ fresh `.env.example`.
 - Authorisation through `ALLOWED_USER_IDS`; only `meals.json` and
   `menu.json` files accepted.
 
-[Unreleased]: https://github.com/luis-serrano-l/demenu-bot/commits/main
+[Unreleased]: https://github.com/luis-serrano-l/decarta-bot/commits/main

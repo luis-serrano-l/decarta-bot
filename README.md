@@ -1,23 +1,23 @@
-<p align="center"><img src="docs/logo.svg" alt="Demenu logo" width="160"></p>
+<p align="center"><img src="docs/logo.svg" alt="Decarta logo" width="160"></p>
 
-<h1 align="center">demenu-bot</h1>
+<h1 align="center">decarta-bot</h1>
 
 <p align="center">
-  <a href="https://github.com/luis-serrano-l/demenu-bot/actions/workflows/ci.yml"><img src="https://github.com/luis-serrano-l/demenu-bot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/luis-serrano-l/decarta-bot/actions/workflows/ci.yml"><img src="https://github.com/luis-serrano-l/decarta-bot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue.svg" alt="Licence: MIT"></a>
 </p>
 
 A restaurant owner sends their menu to a Telegram bot and gets back a link
 to a web page they can share with customers. The bot checks the menu,
 shows a preview, and on confirmation commits it to the companion static
-site, [luis-serrano-l/demenu](https://github.com/luis-serrano-l/demenu),
+site, [luis-serrano-l/decarta-site](https://github.com/luis-serrano-l/decarta-site),
 which GitHub Pages serves. There is no database and no public server: the
 bot needs outbound HTTPS only, and the site repository is the source of
 truth.
 
 ```mermaid
 flowchart LR
-    T["Telegram<br/>owner sends a menu"] -->|long polling| B["demenu-bot<br/>validate, preview, confirm"]
+    T["Telegram<br/>owner sends a menu"] -->|long polling| B["decarta-bot<br/>validate, preview, confirm"]
     B -->|"commit static/menus/&lt;id&gt;.json"| G["GitHub<br/>site repository"]
     G -->|"Actions build, about a minute"| P["GitHub Pages<br/>/menu/&lt;id&gt;"]
 ```
@@ -28,10 +28,10 @@ About five minutes, from nothing to a published menu. You need Docker, a
 GitHub account and a Telegram account.
 
 **1. Get a site to publish to.** Fork
-[luis-serrano-l/demenu](https://github.com/luis-serrano-l/demenu). In your
+[luis-serrano-l/decarta-site](https://github.com/luis-serrano-l/decarta-site). In your
 fork open **Settings → Pages** and set **Source** to **GitHub Actions**,
 then open the **Actions** tab, enable workflows, and run **Deploy Hugo site
-to Pages** once. Your site is now at `https://<you>.github.io/demenu`.
+to Pages** once. Your site is now at `https://<you>.github.io/decarta-site`.
 
 **2. Create the bot.** In Telegram, talk to
 [@BotFather](https://t.me/BotFather): send `/newbot`, choose a name and a
@@ -46,8 +46,8 @@ Read and write**. Nothing else. Copy the token.
 **4. Configure.**
 
 ```bash
-git clone https://github.com/luis-serrano-l/demenu-bot.git
-cd demenu-bot
+git clone https://github.com/luis-serrano-l/decarta-bot.git
+cd decarta-bot
 cp .env.example .env
 openssl rand -hex 32        # paste the output as HASH_SECRET
 ```
@@ -58,8 +58,8 @@ Edit `.env` and fill in the five required values:
 TELEGRAM_BOT_TOKEN=<token from step 2>
 HASH_SECRET=<output of openssl rand -hex 32>
 GITHUB_TOKEN=<token from step 3>
-GITHUB_REPO=<you>/demenu
-HUGO_BASE_URL=https://<you>.github.io/demenu
+GITHUB_REPO=<you>/decarta-site
+HUGO_BASE_URL=https://<you>.github.io/decarta-site
 ```
 
 **5. Start the bot.**
