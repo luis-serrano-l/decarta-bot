@@ -1,0 +1,58 @@
+name: decarta-bot
+base: core24
+adopt-info: decarta-bot # the version comes from git, see parts
+summary: Telegram bot that turns a restaurant menu into a web page
+description: |
+  A restaurant owner sends a menu to the bot on Telegram, as a file or as
+  text. The bot validates it, shows a preview and, once the owner taps
+  Publish, commits it to a static site repository that serves the menu
+  page. /qr returns a QR code of the page for the tables.
+
+  The snap runs the bot as a service. It is installed stopped: write the
+  configuration to /var/snap/decarta-bot/common/.env, then run
+  "sudo snap start --enable decarta-bot".
+license: MIT
+website: https://github.com/luis-serrano-l/decarta-bot
+source-code: https://github.com/luis-serrano-l/decarta-bot
+issues: https://github.com/luis-serrano-l/decarta-bot/issues
+
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+  arm64:
+
+apps:
+  decarta-bot:
+    command: bin/decarta-bot
+    daemon: simple
+    # Without a configuration the bot can only exit, so the service waits
+    # for the operator to start it.
+    install-mode: disable
+    restart-condition: on-failure
+    restart-delay: 30s
+    plugs:
+      - network # Telegram and GitHub
+      - network-bind # GET /health
+    environment:
+      # The same .env format as the other ways of running the bot. Values
+      # set here win over the file.
+      ENV_FILE: $SNAP_COMMON/.env
+      STORAGE_PATH: $SNAP_COMMON/data
+
+parts:
+  decarta-bot:
+    plugin: nil
+    source: .
+    build-snaps:
+      - go/latest/stable
+    build-packages:
+      - git
+    override-build: |
+      version="$(git describe --tags --always | sed 's/^v//')"
+      craftctl set version="$version"
+      # The same build as the Dockerfile: static, stripped, versioned.
+      CGO_ENABLED=0 go build -trimpath \
+        -ldflags="-s -w -X main.version=$version" \
+        -o "$CRAFT_PART_INSTALL/bin/decarta-bot" .
