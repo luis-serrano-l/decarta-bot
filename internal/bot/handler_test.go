@@ -17,10 +17,10 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"github.com/luis-serrano-l/demenu_bot/internal/menu"
-	"github.com/luis-serrano-l/demenu_bot/internal/menuid"
-	"github.com/luis-serrano-l/demenu_bot/internal/publisher"
-	"github.com/luis-serrano-l/demenu_bot/internal/ratelimit"
+	"github.com/luis-serrano-l/demenu-bot/internal/menu"
+	"github.com/luis-serrano-l/demenu-bot/internal/menuid"
+	"github.com/luis-serrano-l/demenu-bot/internal/publisher"
+	"github.com/luis-serrano-l/demenu-bot/internal/ratelimit"
 )
 
 const (
@@ -1077,7 +1077,7 @@ func TestCommands(t *testing.T) {
 		{"link as stranger", strangerID, "/link", "not authorised", siteURL},
 		{"request_access when already allowed", allowedID, "/request_access", "already have access", ""},
 		{"unknown command", allowedID, "/nope", "Unknown command", ""},
-		{"command with bot suffix and args", adminID, "/status@demenu_bot now", "Bot: running", ""},
+		{"command with bot suffix and args", adminID, "/status@demenu-bot now", "Bot: running", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

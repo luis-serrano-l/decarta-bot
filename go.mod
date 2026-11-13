@@ -1,4 +1,4 @@
-module github.com/luis-serrano-l/demenu_bot
+module github.com/luis-serrano-l/demenu-bot
 
 go 1.26.0
 

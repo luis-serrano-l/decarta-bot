@@ -19,9 +19,9 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"github.com/luis-serrano-l/demenu_bot/internal/menuid"
-	"github.com/luis-serrano-l/demenu_bot/internal/publisher"
-	"github.com/luis-serrano-l/demenu_bot/internal/ratelimit"
+	"github.com/luis-serrano-l/demenu-bot/internal/menuid"
+	"github.com/luis-serrano-l/demenu-bot/internal/publisher"
+	"github.com/luis-serrano-l/demenu-bot/internal/ratelimit"
 )
 
 const fakeToken = "0000000000:TEST_telegram-token_not-real"

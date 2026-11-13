@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/luis-serrano-l/demenu_bot/internal/menuid"
+	"github.com/luis-serrano-l/demenu-bot/internal/menuid"
 )
 
 // ErrInvalidID is returned for ids that are not well-formed menu ids.

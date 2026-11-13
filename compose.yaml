@@ -1,7 +1,7 @@
 services:
   bot:
     build: .
-    image: demenu_bot:local
+    image: demenu-bot:local
     env_file: .env
     environment:
       # The only writable path in the container; overrides any value in .env.

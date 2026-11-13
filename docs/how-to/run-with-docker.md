@@ -74,7 +74,7 @@ gets a different menu address.
 To copy the volume out:
 
 ```bash
-docker run --rm -v demenu_bot_demenu-data:/data:ro -v "$PWD":/out busybox \
+docker run --rm -v demenu-bot_demenu-data:/data:ro -v "$PWD":/out busybox \
   tar czf /out/demenu-data.tgz -C /data .
 ```
 

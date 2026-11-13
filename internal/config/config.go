@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/luis-serrano-l/demenu_bot/internal/menuid"
+	"github.com/luis-serrano-l/demenu-bot/internal/menuid"
 )
 
 // Defaults for optional settings.

@@ -8,7 +8,7 @@ branches yet.
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately through
-[GitHub security advisories](https://github.com/luis-serrano-l/demenu_bot/security/advisories/new),
+[GitHub security advisories](https://github.com/luis-serrano-l/demenu-bot/security/advisories/new),
 not in a public issue. Include what you did, what happened and what you
 expected; a failing test or a menu file that triggers the problem is
 ideal. Never include real tokens.

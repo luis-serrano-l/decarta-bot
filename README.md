@@ -1,9 +1,9 @@
 <p align="center"><img src="docs/logo.svg" alt="Demenu logo" width="160"></p>
 
-<h1 align="center">demenu_bot</h1>
+<h1 align="center">demenu-bot</h1>
 
 <p align="center">
-  <a href="https://github.com/luis-serrano-l/demenu_bot/actions/workflows/ci.yml"><img src="https://github.com/luis-serrano-l/demenu_bot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/luis-serrano-l/demenu-bot/actions/workflows/ci.yml"><img src="https://github.com/luis-serrano-l/demenu-bot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue.svg" alt="Licence: MIT"></a>
 </p>
 
@@ -17,7 +17,7 @@ truth.
 
 ```mermaid
 flowchart LR
-    T["Telegram<br/>owner sends a menu"] -->|long polling| B["demenu_bot<br/>validate, preview, confirm"]
+    T["Telegram<br/>owner sends a menu"] -->|long polling| B["demenu-bot<br/>validate, preview, confirm"]
     B -->|"commit static/menus/&lt;id&gt;.json"| G["GitHub<br/>site repository"]
     G -->|"Actions build, about a minute"| P["GitHub Pages<br/>/menu/&lt;id&gt;"]
 ```
@@ -46,8 +46,8 @@ Read and write**. Nothing else. Copy the token.
 **4. Configure.**
 
 ```bash
-git clone https://github.com/luis-serrano-l/demenu_bot.git
-cd demenu_bot
+git clone https://github.com/luis-serrano-l/demenu-bot.git
+cd demenu-bot
 cp .env.example .env
 openssl rand -hex 32        # paste the output as HASH_SECRET
 ```

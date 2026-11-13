@@ -1,4 +1,4 @@
-# demenu_bot documentation
+# demenu-bot documentation
 
 Organised by [Diátaxis](https://diataxis.fr/): pick the section that
 matches what you need right now.
