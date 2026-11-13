@@ -24,6 +24,7 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"rsc.io/qr"
 
 	"github.com/luis-serrano-l/decarta-bot/internal/menu"
 	"github.com/luis-serrano-l/decarta-bot/internal/menuid"
@@ -56,6 +57,11 @@ const maxIssuesShown = 5
 // maxCategoriesShown bounds the category list in a preview.
 const maxCategoriesShown = 12
 
+// qrScale is the number of image pixels per QR module. A menu link needs
+// about 40 modules a side, so the image is roughly 500 pixels wide: sharp
+// on a phone and large enough to print.
+const qrScale = 12
+
 //go:embed template.json
 var templateJSON []byte
 
@@ -81,6 +87,7 @@ var Commands = []Command{
 	{"help", "Commands and how to publish"},
 	{"template", "Get an example menu.json to edit"},
 	{"link", "Get the link to your menu"},
+	{"qr", "Get a QR code for your menu"},
 	{"status", "See what is published"},
 	{"delete", "Unpublish your menu"},
 }
@@ -90,6 +97,7 @@ var Commands = []Command{
 const (
 	actTemplate = "template"
 	actHow      = "how"
+	actQR       = "qr"
 	actPublish  = "publish"
 	actDelete   = "delete"
 	actCancel   = "cancel"
@@ -105,6 +113,8 @@ type Messenger interface {
 	Edit(chatID int64, messageID int, text string, rows ...[]Button) error
 	// SendFile delivers content as a document with a caption.
 	SendFile(chatID int64, name string, content []byte, caption string) error
+	// SendPhoto delivers content, an image, as a photo with a caption.
+	SendPhoto(chatID int64, name string, content []byte, caption string) error
 	// AnswerCallback acknowledges a button press, which stops the
 	// button's loading animation. text, if not empty, is shown as a toast.
 	AnswerCallback(callbackID, text string) error
@@ -233,6 +243,8 @@ func (h *Handler) command(u user, msg *tgbotapi.Message) {
 		h.template(u)
 	case "link", "myurl", "menuurl":
 		h.link(u, cmd)
+	case "qr":
+		h.qr(u)
 	case "delete":
 		h.askDelete(u)
 	case "request_access":
@@ -276,6 +288,35 @@ func (h *Handler) link(u user, cmd string) {
 		return
 	}
 	h.reply(u, "🔗 Your menu:\n"+url, openButton(url))
+}
+
+// qr sends the menu link as a QR code to print or show to customers. Only
+// a published menu gets one, so that nobody prints a code for a page that
+// does not exist.
+func (h *Handler) qr(u user) {
+	if !h.requirePublisher(u, "qr") {
+		return
+	}
+	url := h.menuURL(u.id)
+	if !h.store.Has(u.id) {
+		h.reply(u, "📱 Your QR code will point to:\n"+url+
+			"\n\nNothing is published yet. Send a menu first; /template has an example.")
+		return
+	}
+	caption := "📱 QR code for your menu:\n" + url +
+		"\n\nPrint it or show it on a screen. Your customers scan it with their phone camera."
+	// M tolerates the damage a printed code on a table gets.
+	code, err := qr.Encode(url, qr.M)
+	if err == nil {
+		code.Scale = qrScale
+		err = h.tg.SendPhoto(u.chatID, "menu-qr.png", code.PNG(), caption)
+	}
+	if err != nil {
+		// The link still gets the owner to the page.
+		h.log.Warn("could not send the QR code", "id", u.id, "err", err)
+		h.reply(u, "❌ I could not make the QR code right now. Please try /qr again in a moment.\n\n🔗 Your menu:\n"+url,
+			openButton(url))
+	}
 }
 
 func (h *Handler) status(u user) {
@@ -482,6 +523,8 @@ func (h *Handler) callback(ctx context.Context, cq *tgbotapi.CallbackQuery) {
 		h.template(u)
 	case actHow:
 		h.reply(u, howText)
+	case actQR:
+		h.qr(u)
 	case actPublish, actDelete, actCancel:
 		// One confirmed action per user at a time. Updates are handled
 		// concurrently, so without this a second tap during a slow publish
@@ -580,8 +623,8 @@ func (h *Handler) confirmPublish(ctx context.Context, u user, msgID int, nonce s
 	h.log.Info("menu published", "id", u.id, "bytes", len(p.content))
 	url := h.menuURL(u.id)
 	h.edit(u, msgID, "✅ Menu published!\n\n🔗 "+url+
-		"\n\nThe page updates in about a minute. Use /link anytime to get this link again.",
-		openButton(url))
+		"\n\nThe page updates in about a minute. Use /link anytime to get this link again, or /qr for a QR code.",
+		openButton(url), []Button{{Text: "Get QR code", Data: actQR}})
 }
 
 func (h *Handler) confirmDelete(ctx context.Context, u user, msgID int, nonce string) {
@@ -814,7 +857,7 @@ const howText = `💡 How it works
 2. Send it here, as a .json file or pasted as text.
 3. I check it. If something is wrong I name the field and how to fix it.
 4. You get a summary. Nothing is public until you tap Publish.
-5. The page is online in about a minute. /link gives you the address.
+5. The page is online in about a minute. /link gives you the address and /qr a QR code for your tables.
 
 To change the menu, send a new one. To take it down, use /delete.
 
@@ -833,6 +876,7 @@ func helpText(u user) string {
 	if u.publisher {
 		b.WriteString("/template - Get an example menu.json to edit\n")
 		b.WriteString("/link - Get the link to your menu\n")
+		b.WriteString("/qr - Get a QR code for your menu\n")
 		b.WriteString("/status - See what is published\n")
 		b.WriteString("/delete - Unpublish your menu\n")
 		b.WriteString("/myid - Show your Telegram user ID\n")

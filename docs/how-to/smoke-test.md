@@ -35,21 +35,22 @@ Send each message to the bot in a private chat.
 
 | # | Do this | Expect |
 |---|---|---|
-| 1 | Open the bot and look at the command menu next to the message box | Six commands, starting with `/start` |
+| 1 | Open the bot and look at the command menu next to the message box | Seven commands, starting with `/start` |
 | 2 | `/start` | Three lines of explanation with **Get a template** and **How it works** |
 | 3 | `/status` | Your access level; no menu published |
 | 4 | `/template` | A `menu.json` file |
 | 5 | Send that `menu.json` back unchanged | A summary with **Publish** and **Cancel** |
 | 6 | Tap **Cancel** | Discarded; no new commit on the scratch branch |
-| 7 | Send `menu.json` again and tap **Publish** | "Menu published" with a link and **Open my menu** |
+| 7 | Send `menu.json` again and tap **Publish** | "Menu published" with a link, **Open my menu** and **Get QR code** |
 | 8 | Open the scratch branch on GitHub | A commit `menu: update <id>` adding `static/menus/<id>.json` |
 | 9 | Tap **Publish** on the same message again | "This button has expired or was already used" |
 | 10 | Send the text `hello` | A hint to use `/template` |
 | 11 | Send `{"name": ""}` | A list of problems, each with a field path and a fix |
 | 12 | `/link` | The same address as in step 7 |
-| 13 | `/delete`, then **Yes, delete it** | Confirmation; a commit `menu: delete <id>` on the scratch branch |
-| 14 | `/status` | No menu published |
-| 15 | From a second Telegram account, if you have one: `/start`, then `/request_access` | It is told how to ask for access; you receive the request with its ID |
+| 13 | `/qr` | A QR code image; scanning it with a phone camera gives the address from step 7 |
+| 14 | `/delete`, then **Yes, delete it** | Confirmation; a commit `menu: delete <id>` on the scratch branch |
+| 15 | `/status` | No menu published |
+| 16 | From a second Telegram account, if you have one: `/start`, then `/request_access` | It is told how to ask for access; you receive the request with its ID |
 
 The link from step 7 answers 404 during this test: the site is built from
 `main` only, and the menu is on the scratch branch. That is expected.

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `/qr` sends a QR code of the menu address as an image, to print or show
+  on a screen. The "Menu published" message has a **Get QR code** button
+  that does the same.
+
 ## [1.0.0] - 2026-11-12
 
 This is a breaking release: menus move to the site repository, every

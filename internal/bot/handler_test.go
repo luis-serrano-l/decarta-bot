@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image/png"
 	"log/slog"
 	"slices"
 	"strconv"
@@ -48,6 +49,7 @@ type sentMessage struct {
 	rows     [][]Button
 	fileName string
 	file     []byte
+	photo    bool // sent with SendPhoto rather than SendFile
 	edits    int
 }
 
@@ -62,6 +64,7 @@ type fakeMessenger struct {
 	sendErr   error
 	editErr   error
 	fileErr   error
+	photoErr  error
 	downloads int
 	typing    map[int64]int
 	answered  []string // callback ids
@@ -112,6 +115,16 @@ func (f *fakeMessenger) SendFile(chatID int64, name string, content []byte, capt
 		return f.fileErr
 	}
 	f.add(chatID, &sentMessage{text: caption, fileName: name, file: content})
+	return nil
+}
+
+func (f *fakeMessenger) SendPhoto(chatID int64, name string, content []byte, caption string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.photoErr != nil {
+		return f.photoErr
+	}
+	f.add(chatID, &sentMessage{text: caption, fileName: name, file: content, photo: true})
 	return nil
 }
 
@@ -567,8 +580,9 @@ func TestPublishedMessage(t *testing.T) {
 	if !strings.Contains(m.text, "about a minute") {
 		t.Errorf("message does not say when the page updates: %q", m.text)
 	}
-	if len(m.rows) != 1 || len(m.rows[0]) != 1 || m.rows[0][0] != (Button{Text: "Open my menu", URL: url}) {
-		t.Errorf("buttons = %+v, want a single \"Open my menu\" URL button to %s", m.rows, url)
+	want := [][]Button{{{Text: "Open my menu", URL: url}}, {{Text: "Get QR code", Data: actQR}}}
+	if !slices.EqualFunc(m.rows, want, slices.Equal[[]Button]) {
+		t.Errorf("buttons = %+v, want %+v", m.rows, want)
 	}
 	if f.tg.typing[allowedID] <= typingBefore {
 		t.Error("no typing indicator was shown while publishing")
@@ -1075,6 +1089,8 @@ func TestCommands(t *testing.T) {
 		{"link as allowed, nothing published", allowedID, "/link", "Nothing is published yet", ""},
 		{"myurl alias", allowedID, "/myurl", siteURL + "/menu/", ""},
 		{"link as stranger", strangerID, "/link", "not authorised", siteURL},
+		{"qr as allowed, nothing published", allowedID, "/qr", "Nothing is published yet", ""},
+		{"qr as stranger", strangerID, "/qr", "not authorised", siteURL},
 		{"request_access when already allowed", allowedID, "/request_access", "already have access", ""},
 		{"unknown command", allowedID, "/nope", "Unknown command", ""},
 		{"command with bot suffix and args", adminID, "/status@decarta-bot now", "Bot: running", ""},
@@ -1101,7 +1117,7 @@ func TestCommands(t *testing.T) {
 // Every command in the registered menu must be handled, and described
 // within Telegram's limits.
 func TestRegisteredCommandsAreHandled(t *testing.T) {
-	want := []string{"start", "help", "template", "link", "status", "delete"}
+	want := []string{"start", "help", "template", "link", "qr", "status", "delete"}
 	var got []string
 	for _, c := range Commands {
 		got = append(got, c.Name)
@@ -1140,6 +1156,65 @@ func TestLinkAndStatusAfterPublish(t *testing.T) {
 		if !strings.Contains(m.text, want) {
 			t.Errorf("/status does not contain %q:\n%s", want, m.text)
 		}
+	}
+}
+
+func TestQR(t *testing.T) {
+	f := newFixture(t)
+	url := siteURL + "/menu/" + f.ids.ID(allowedID)
+
+	// Without a published menu there is nothing to scan, so no image.
+	f.send(allowedID, "/qr")
+	if m := f.tg.lastMsg(allowedID); m.photo || !strings.Contains(m.text, "Nothing is published yet") {
+		t.Fatalf("/qr before publishing: photo = %v, text = %q", m.photo, m.text)
+	}
+
+	f.publish(allowedID)
+	tests := []struct {
+		name string
+		ask  func()
+	}{
+		{"command", func() { f.send(allowedID, "/qr") }},
+		{"button under the published message", func() { f.press(allowedID, "Get QR code") }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			before := f.tg.count(allowedID)
+			tt.ask()
+			m := f.tg.lastMsg(allowedID)
+			if f.tg.count(allowedID) != before+1 || !m.photo || m.fileName != "menu-qr.png" {
+				t.Fatalf("got photo = %v, name = %q, text = %q; want one new photo", m.photo, m.fileName, m.text)
+			}
+			if !strings.Contains(m.text, url) {
+				t.Errorf("caption %q does not contain the link %s", m.text, url)
+			}
+			cfg, err := png.DecodeConfig(bytes.NewReader(m.file))
+			if err != nil {
+				t.Fatalf("the photo is not a PNG: %v", err)
+			}
+			if cfg.Width != cfg.Height || cfg.Width < 300 || cfg.Width > 1000 {
+				t.Errorf("image is %dx%d, want a square of 300 to 1000 pixels", cfg.Width, cfg.Height)
+			}
+		})
+	}
+	if f.pub.Calls() != 1 {
+		t.Errorf("publishes = %d, want 1: a QR code must not publish", f.pub.Calls())
+	}
+	assertNoRawIDs(t, f.logs.String())
+}
+
+func TestQRFallsBackToTheLink(t *testing.T) {
+	f := newFixture(t)
+	url := siteURL + "/menu/" + f.ids.ID(allowedID)
+	f.publish(allowedID)
+	f.tg.photoErr = errors.New("telegram: send photo: Bad Request")
+	f.send(allowedID, "/qr")
+	m := f.tg.lastMsg(allowedID)
+	if m.photo || !strings.Contains(m.text, "could not make the QR code") || !strings.Contains(m.text, url) {
+		t.Errorf("fallback reply = %q", m.text)
+	}
+	if !slices.Equal(labels(m), []string{"Open my menu"}) {
+		t.Errorf("fallback buttons = %q", labels(m))
 	}
 }
 
@@ -1265,7 +1340,7 @@ func TestEditFailureFallsBackToANewMessage(t *testing.T) {
 	f.tg.editErr = errors.New("telegram: edit message: Bad Request: message can't be edited")
 	f.press(allowedID, "Publish")
 	m := f.tg.lastMsg(allowedID)
-	if m.id == previewID || !strings.Contains(m.text, "Menu published") || len(m.rows) != 1 {
+	if m.id == previewID || !strings.Contains(m.text, "Menu published") || len(m.rows) != 2 {
 		t.Errorf("fallback message = %+v", m)
 	}
 }
