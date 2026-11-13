@@ -12,7 +12,7 @@ and one permission, so that a leaked token can do nothing else.
    [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new)
    (**Settings → Developer settings → Personal access tokens →
    Fine-grained tokens → Generate new token**).
-3. **Token name**: something you will recognise, such as `demenu-bot`.
+3. **Token name**: something you will recognise, such as `decarta-bot`.
 4. **Resource owner**: the owner of the site repository.
 5. **Expiration**: choose a date. GitHub emails you before it expires.
 6. **Repository access**: **Only select repositories**, and select the
@@ -27,7 +27,7 @@ Put it in `.env`, with the repository it belongs to:
 
 ```ini
 GITHUB_TOKEN=github_pat_...
-GITHUB_REPO=<owner>/demenu
+GITHUB_REPO=<owner>/decarta-site
 GITHUB_BRANCH=main
 ```
 

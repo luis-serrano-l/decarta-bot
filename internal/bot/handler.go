@@ -25,11 +25,11 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
-	"github.com/luis-serrano-l/demenu-bot/internal/menu"
-	"github.com/luis-serrano-l/demenu-bot/internal/menuid"
-	"github.com/luis-serrano-l/demenu-bot/internal/publisher"
-	"github.com/luis-serrano-l/demenu-bot/internal/ratelimit"
-	"github.com/luis-serrano-l/demenu-bot/internal/store"
+	"github.com/luis-serrano-l/decarta-bot/internal/menu"
+	"github.com/luis-serrano-l/decarta-bot/internal/menuid"
+	"github.com/luis-serrano-l/decarta-bot/internal/publisher"
+	"github.com/luis-serrano-l/decarta-bot/internal/ratelimit"
+	"github.com/luis-serrano-l/decarta-bot/internal/store"
 )
 
 // ErrTooLarge is returned by Messenger.Download when a file exceeds the cap.

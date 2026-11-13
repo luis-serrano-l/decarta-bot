@@ -1,4 +1,4 @@
-# demenu-bot documentation
+# decarta-bot documentation
 
 Organised by [Diátaxis](https://diataxis.fr/): pick the section that
 matches what you need right now.
@@ -14,6 +14,8 @@ matches what you need right now.
   troubleshoot the bot.
 - [Create the BotFather token](how-to/create-botfather-token.md)
 - [Create the fine-grained GitHub token](how-to/create-github-token.md)
+- [Smoke-test a release](how-to/smoke-test.md): the manual run against the
+  real Telegram and GitHub.
 
 ## Reference: look something up
 

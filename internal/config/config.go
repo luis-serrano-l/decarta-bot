@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/luis-serrano-l/demenu-bot/internal/menuid"
+	"github.com/luis-serrano-l/decarta-bot/internal/menuid"
 )
 
 // Defaults for optional settings.
@@ -83,7 +83,7 @@ func Load(getenv func(string) string) (*Config, error) {
 		fail("GITHUB_TOKEN is required")
 	}
 	if c.GitHubRepo == "" {
-		fail(`GITHUB_REPO is required (for example "luis-serrano-l/demenu")`)
+		fail(`GITHUB_REPO is required (for example "luis-serrano-l/decarta-site")`)
 	}
 
 	var err error

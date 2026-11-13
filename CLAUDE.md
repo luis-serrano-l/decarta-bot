@@ -1,7 +1,7 @@
-# demenu-bot
+# decarta-bot
 
 Telegram bot that validates restaurant menus and publishes them to the
-companion static site ([luis-serrano-l/demenu](https://github.com/luis-serrano-l/demenu)).
+companion static site ([luis-serrano-l/decarta-site](https://github.com/luis-serrano-l/decarta-site)).
 
 ## Commands
 

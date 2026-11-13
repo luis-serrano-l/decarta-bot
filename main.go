@@ -1,4 +1,4 @@
-// Command demenu-bot is a Telegram bot that validates restaurant menus and
+// Command decarta-bot is a Telegram bot that validates restaurant menus and
 // publishes them to a static site repository.
 package main
 
@@ -21,13 +21,13 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
 
-	"github.com/luis-serrano-l/demenu-bot/internal/bot"
-	"github.com/luis-serrano-l/demenu-bot/internal/config"
-	"github.com/luis-serrano-l/demenu-bot/internal/menuid"
-	"github.com/luis-serrano-l/demenu-bot/internal/publisher"
-	"github.com/luis-serrano-l/demenu-bot/internal/ratelimit"
-	"github.com/luis-serrano-l/demenu-bot/internal/redact"
-	"github.com/luis-serrano-l/demenu-bot/internal/store"
+	"github.com/luis-serrano-l/decarta-bot/internal/bot"
+	"github.com/luis-serrano-l/decarta-bot/internal/config"
+	"github.com/luis-serrano-l/decarta-bot/internal/menuid"
+	"github.com/luis-serrano-l/decarta-bot/internal/publisher"
+	"github.com/luis-serrano-l/decarta-bot/internal/ratelimit"
+	"github.com/luis-serrano-l/decarta-bot/internal/redact"
+	"github.com/luis-serrano-l/decarta-bot/internal/store"
 )
 
 const (

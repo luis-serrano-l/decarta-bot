@@ -66,7 +66,7 @@ bot.
 ## Back up
 
 There is little to back up. The site repository holds every published
-menu. The `demenu-data` volume holds a copy of each user's last published
+menu. The `decarta-data` volume holds a copy of each user's last published
 menu, which the bot uses to answer `/link` and `/status`. The one thing
 you must keep safe is `HASH_SECRET`: with a different secret every user
 gets a different menu address.
@@ -74,8 +74,8 @@ gets a different menu address.
 To copy the volume out:
 
 ```bash
-docker run --rm -v demenu-bot_demenu-data:/data:ro -v "$PWD":/out busybox \
-  tar czf /out/demenu-data.tgz -C /data .
+docker run --rm -v decarta-bot_decarta-data:/data:ro -v "$PWD":/out busybox \
+  tar czf /out/decarta-data.tgz -C /data .
 ```
 
 ## Run without Docker

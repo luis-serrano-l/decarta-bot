@@ -79,7 +79,7 @@ jobs:
             echo "HASH_SECRET=$(openssl rand -hex 32)"
             echo "GITHUB_TOKEN=dummy-token-for-ci"
             echo "GITHUB_REPO=example/example"
-            echo "HUGO_BASE_URL=https://example.github.io/demenu"
+            echo "HUGO_BASE_URL=https://example.github.io/decarta-site"
           } > .env
       - name: Build the image
         run: docker compose build
