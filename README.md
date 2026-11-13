@@ -1,6 +1,9 @@
-<p align="center"><img src="docs/logo.svg" alt="Decarta logo" width="160"></p>
-
-<h1 align="center">decarta-bot</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg">
+    <img src="docs/logo.svg" alt="decarta-bot" width="320">
+  </picture>
+</h1>
 
 <p align="center">
   <a href="https://github.com/luis-serrano-l/decarta-bot/actions/workflows/ci.yml"><img src="https://github.com/luis-serrano-l/decarta-bot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
