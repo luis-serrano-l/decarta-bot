@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+    # A version tag publishes the snap to the candidate channel.
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
   pull_request:
 
 permissions:
@@ -102,3 +104,75 @@ jobs:
       - name: Stop
         if: always()
         run: docker compose down --volumes
+
+  snap:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the snap version comes from git describe
+      - uses: snapcore/action-build@3bdaa03e1ba6bf59a65f84a751d943d549a54e79 # v1.3.0
+        id: build
+      - name: Install the snap
+        env:
+          SNAP_FILE: ${{ steps.build.outputs.snap }}
+        run: |
+          sudo snap install --dangerous "$SNAP_FILE"
+          # A service gets no command in /snap/bin; "snap run" starts the
+          # same binary under the same confinement.
+          snap run decarta-bot --version
+          snap connections decarta-bot
+      - name: The service waits to be configured
+        run: |
+          snap services decarta-bot | tee /tmp/services.txt
+          grep -Eq '^decarta-bot(\.decarta-bot)? +disabled +inactive' /tmp/services.txt
+      - name: Configure, start and check the health endpoint
+        run: |
+          {
+            echo "TELEGRAM_BOT_TOKEN=0000000000:dummy-token-for-ci"
+            echo "HASH_SECRET=$(openssl rand -hex 32)"
+            echo "GITHUB_TOKEN=dummy-token-for-ci"
+            echo "GITHUB_REPO=example/example"
+            echo "HUGO_BASE_URL=https://example.github.io/decarta-site"
+          } | sudo install -m 600 /dev/stdin /var/snap/decarta-bot/common/.env
+          sudo snap start --enable decarta-bot
+          for _ in $(seq 1 30); do
+            if sudo snap run decarta-bot -healthcheck 2>/dev/null; then break; fi
+            sleep 1
+          done
+          sudo snap run decarta-bot -healthcheck
+          curl --fail --silent http://127.0.0.1:8080/health
+          sudo test -d /var/snap/decarta-bot/common/data
+      - name: Logs
+        if: always()
+        run: sudo snap logs -n 50 decarta-bot || true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: snap-${{ runner.arch }}
+          path: ${{ steps.build.outputs.snap }}
+          if-no-files-found: error
+      # Publishing needs the store login of the snap's owner. Forks and
+      # pull requests do not have it and stop after the checks above.
+      - name: Is there a store login?
+        id: store
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ -n "$SNAPCRAFT_STORE_CREDENTIALS" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish to the Snap Store
+        if: steps.store.outputs.publish == 'true'
+        uses: snapcore/action-publish@214b86e5ca036ead1668c79afb81e550e6c54d40 # v1.2.0
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          # main goes to edge; a version tag goes to candidate, and is
+          # promoted to stable by hand after the smoke test.
+          release: ${{ startsWith(github.ref, 'refs/tags/v') && 'candidate' || 'edge' }}
