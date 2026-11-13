@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/qr` sends a QR code of the menu address as an image, to print or show
   on a screen. The "Menu published" message has a **Get QR code** button
   that does the same.
+- `decarta-bot --version` prints the version, which is also in the
+  "starting" log line.
+- Releases: pushing a version tag publishes Linux binaries for amd64 and
+  arm64 with checksums on the GitHub release, and a container image for
+  both architectures at `ghcr.io/luis-serrano-l/decarta-bot`.
 - A fuzz test for the menu parser, run briefly in CI: no input may crash
   it, and every accepted menu must survive being published and read back.
 

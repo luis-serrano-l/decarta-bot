@@ -16,6 +16,8 @@ matches what you need right now.
 - [Create the fine-grained GitHub token](how-to/create-github-token.md)
 - [Smoke-test a release](how-to/smoke-test.md): the manual run against the
   real Telegram and GitHub.
+- [Cut a release](how-to/release.md): tag a version and let the workflow
+  publish the binaries and the image.
 
 ## Reference: look something up
 
