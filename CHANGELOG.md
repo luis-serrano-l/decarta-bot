@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-This will be a breaking release: menus move to the site repository, every
+## [1.0.0] - 2026-11-12
+
+This is a breaking release: menus move to the site repository, every
 menu address changes, and the configuration is different. Start from a
 fresh `.env.example`.
 
@@ -102,4 +104,5 @@ fresh `.env.example`.
 - Authorisation through `ALLOWED_USER_IDS`; only `meals.json` and
   `menu.json` files accepted.
 
-[Unreleased]: https://github.com/luis-serrano-l/decarta-bot/commits/main
+[Unreleased]: https://github.com/luis-serrano-l/decarta-bot/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/luis-serrano-l/decarta-bot/releases/tag/v1.0.0
