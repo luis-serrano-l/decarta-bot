@@ -3,6 +3,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"flag"
@@ -60,9 +61,12 @@ func run() int {
 	}
 
 	// A .env file is a convenience for local runs; in containers the
-	// environment is injected and the file does not exist.
-	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
-		fmt.Fprintln(os.Stderr, "warning: could not read .env; using the environment only")
+	// environment is injected and the file does not exist. ENV_FILE names
+	// a file elsewhere: the snap keeps it in its own writable directory.
+	// Variables already in the environment win over the file.
+	envFile := cmp.Or(os.Getenv("ENV_FILE"), ".env")
+	if err := godotenv.Load(envFile); err != nil && !errors.Is(err, os.ErrNotExist) {
+		fmt.Fprintf(os.Stderr, "warning: could not read %s; using the environment only\n", envFile)
 	}
 
 	if *healthcheck {
