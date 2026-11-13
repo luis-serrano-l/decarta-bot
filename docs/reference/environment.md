@@ -2,7 +2,8 @@
 
 The bot is configured entirely through environment variables. `go run .`
 also reads a `.env` file in the working directory; `compose.yaml` passes
-`.env` to the container. [.env.example](../../.env.example) is a template
+`.env` to the container, and the snap reads
+`/var/snap/decarta-bot/common/.env`. [.env.example](../../.env.example) is a template
 with every variable.
 
 The bot validates everything at startup and exits with status 2, listing
@@ -26,7 +27,8 @@ malformed. Changes take effect only after a restart.
 | `GITHUB_BRANCH` | `main` | Branch name | Branch of `GITHUB_REPO` to commit to. |
 | `ALLOWED_USER_IDS` | none | Comma-separated positive integers | Telegram user IDs that may publish. A malformed entry is an error, not skipped. |
 | `ADMIN_USER_IDS` | none | Comma-separated positive integers | May publish, and receive `/request_access` notifications. If empty, the bot logs a warning and nobody receives access requests. |
-| `STORAGE_PATH` | `./data` | Directory | Local copy of each user's last published menu. `compose.yaml` always sets it to `/data`, the named volume. |
+| `STORAGE_PATH` | `./data` | Directory | Local copy of each user's last published menu. `compose.yaml` always sets it to `/data`, the named volume, and the snap to `/var/snap/decarta-bot/common/data`. |
+| `ENV_FILE` | `.env` | File path | The file of variables to read at startup. A missing file is not an error. A variable already in the environment wins over the file. The snap sets this; you rarely need to. |
 | `PORT` | `8080` | 1 to 65535 | Port of `GET /health`. Not published by `compose.yaml`. |
 | `MAX_UPLOAD_BYTES` | `262144` (256 KB) | 1 to 20971520 | Largest accepted menu, as a message or a file. The ceiling is Telegram's own 20 MB download limit for bots. |
 | `PUBLISH_RATE_LIMIT` | `5` | 1 to 1000 | Publishes allowed per user within `PUBLISH_RATE_WINDOW`. |

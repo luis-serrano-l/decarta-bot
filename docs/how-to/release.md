@@ -8,6 +8,8 @@ A release is a version tag. Pushing it makes the
 - a container image for both architectures at
   `ghcr.io/luis-serrano-l/decarta-bot`, tagged `1.2.3`, `1.2` and `latest`.
 
+The same tag makes CI publish the snap to the `candidate` channel.
+
 ## Steps
 
 1. Choose the version by [Semantic Versioning](https://semver.org/): a new
@@ -40,6 +42,9 @@ A release is a version tag. Pushing it makes the
    ```
 
    The last command prints `decarta-bot 1.2.3`.
+
+6. Promote the snap from `candidate` to `stable`, as described in
+   [Run as a snap](run-as-snap.md#for-maintainers-publishing-the-snap).
 
 ## The first time
 
