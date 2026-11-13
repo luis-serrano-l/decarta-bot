@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="t d">
+<title id="t">Decarta icon</title>
+<desc id="d">A menu sheet with a speech bubble in front of it carrying a tick.</desc>
+<rect width="512" height="512" rx="112" fill="#fffaf4"/>
+<g transform="translate(51 51) scale(.8)">
+<mask id="m"><rect width="512" height="512" fill="#fff"/>
+<g fill="none" stroke="#000" stroke-linecap="round"><path stroke-width="28" d="M136 136h96"/><path stroke-width="22" d="M136 196h150M136 250h110"/></g>
+<path fill="#000" stroke="#000" stroke-width="40" stroke-linejoin="round" d="M276 260h124a48 48 0 0 1 48 48v56a48 48 0 0 1-48 48h-4v56l-60-56h-60a48 48 0 0 1-48-48v-56a48 48 0 0 1 48-48Z"/></mask>
+<rect x="84" y="56" width="256" height="352" rx="40" fill="#2a211b" mask="url(#m)"/>
+<path fill="#b23a0a" d="M276 260h124a48 48 0 0 1 48 48v56a48 48 0 0 1-48 48h-4v56l-60-56h-60a48 48 0 0 1-48-48v-56a48 48 0 0 1 48-48Z"/>
+<path fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" d="M296 338l30 28 56-58"/>
+</g>
+</svg>

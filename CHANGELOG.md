@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The snap's Store description says what to put in the `.env` file and
   lists the commands to start, restart, stop and inspect the service.
+- New logo: a menu sheet with a "published" reply bubble, replacing the
+  hand-drawn badge. The README shows it with the project name, in a light
+  and a dark version, and the snap has it as its Store icon.
 
 ## [1.1.0] - 2026-11-13
 
