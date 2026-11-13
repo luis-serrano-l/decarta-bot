@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 760" width="400" height="760" role="img" aria-labelledby="t">
+<title id="t">Replay of a chat with decarta-bot: /start, a menu sent as text, the preview, Publish, and the QR code of the published page</title>
+<style>
+.f{animation-duration:18.0s;animation-iteration-count:infinite;animation-timing-function:step-end}
+@media (prefers-reduced-motion:reduce){.f{animation:none}}
+.chat{box-sizing:border-box;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;
+padding:12px;overflow:hidden;font:14px/1.38 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#2a211b}
+.m{box-sizing:border-box;max-width:86%;padding:8px 12px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere;flex:none}
+.u{align-self:flex-end;background:#b23a0a;color:#fff;border-bottom-right-radius:4px}
+.b{align-self:flex-start;background:#fff;border:1px solid #eeddd0;border-bottom-left-radius:4px}
+.b img{display:block;width:190px;height:190px;margin:0 0 8px;border-radius:8px}
+.r{display:flex;gap:6px;margin-top:8px}
+.k{flex:1;padding:7px 4px;border-radius:10px;background:#fde5d4;color:#b23a0a;font-weight:600;text-align:center;white-space:nowrap}
+.k.p{background:#b23a0a;color:#fff}
+.h{font:600 17px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:#2a211b}
+.s{font:13px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:#6b5d52}
+@keyframes f1{0%{opacity:0}4.44%{opacity:1}100%{opacity:1}}
+@keyframes f2{0%{opacity:0}9.44%{opacity:1}100%{opacity:1}}
+@keyframes f3{0%{opacity:0}22.78%{opacity:1}100%{opacity:1}}
+@keyframes f4{0%{opacity:0}31.11%{opacity:1}100%{opacity:1}}
+@keyframes f5{0%{opacity:0}47.78%{opacity:1}100%{opacity:1}}
+@keyframes f6{0%{opacity:0}51.67%{opacity:1}100%{opacity:1}}
+@keyframes f7{0%{opacity:0}68.33%{opacity:1}100%{opacity:1}}
+@keyframes f8{0%{opacity:0}72.22%{opacity:1}100%{opacity:1}}
+</style>
+<clipPath id="c"><rect width="400" height="760" rx="28"/></clipPath>
+<g clip-path="url(#c)">
+<g><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"></div></foreignObject></g>
+<g class="f" style="animation-name:f1"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div></div></foreignObject></g>
+<g class="f" style="animation-name:f2"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
+📄 Send me the menu as a file or as text and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div></div></foreignObject></g>
+<g class="f" style="animation-name:f3"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
+📄 Send me the menu as a file or as text and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+- ITEM: Bruschetta
+  PRICE: 6.50
+  DESCRIPTION: Tomato, basil, olive oil
+- ITEM: Burrata
+  PRICE: 9.00
+
+CATEGORY: Pasta
+- ITEM: Carbonara
+  PRICE: 12.50
+- ITEM: Cacio e pepe
+  PRICE: 11.00
+
+CATEGORY: Dolci
+- ITEM: Tiramisù
+  PRICE: 6.00</div></div></foreignObject></g>
+<g class="f" style="animation-name:f4"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
+📄 Send me the menu as a file or as text and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+- ITEM: Bruschetta
+  PRICE: 6.50
+  DESCRIPTION: Tomato, basil, olive oil
+- ITEM: Burrata
+  PRICE: 9.00
+
+CATEGORY: Pasta
+- ITEM: Carbonara
+  PRICE: 12.50
+- ITEM: Cacio e pepe
+  PRICE: 11.00
+
+CATEGORY: Dolci
+- ITEM: Tiramisù
+  PRICE: 6.00</div><div class="m b">📋 Your menu is valid. Here is what I read:
+
+• Antipasti (2 items)
+• Pasta (2 items)
+• Dolci (1 item)
+
+Categories: 3
+Items: 5
+Prices: 6.00 to 12.50
+
+Publish it?<div class="r"><div class="k">Publish</div><div class="k">Cancel</div></div></div></div></foreignObject></g>
+<g class="f" style="animation-name:f5"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
+📄 Send me the menu as a file or as text and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+- ITEM: Bruschetta
+  PRICE: 6.50
+  DESCRIPTION: Tomato, basil, olive oil
+- ITEM: Burrata
+  PRICE: 9.00
+
+CATEGORY: Pasta
+- ITEM: Carbonara
+  PRICE: 12.50
+- ITEM: Cacio e pepe
+  PRICE: 11.00
+
+CATEGORY: Dolci
+- ITEM: Tiramisù
+  PRICE: 6.00</div><div class="m b">📋 Your menu is valid. Here is what I read:
+
+• Antipasti (2 items)
+• Pasta (2 items)
+• Dolci (1 item)
+
+Categories: 3
+Items: 5
+Prices: 6.00 to 12.50
+
+Publish it?<div class="r"><div class="k p">Publish</div><div class="k">Cancel</div></div></div></div></foreignObject></g>
+<g class="f" style="animation-name:f6"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
+📄 Send me the menu as a file or as text and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+- ITEM: Bruschetta
+  PRICE: 6.50
+  DESCRIPTION: Tomato, basil, olive oil
+- ITEM: Burrata
+  PRICE: 9.00
+
+CATEGORY: Pasta
+- ITEM: Carbonara
+  PRICE: 12.50
+- ITEM: Cacio e pepe
+  PRICE: 11.00
+
+CATEGORY: Dolci
+- ITEM: Tiramisù
+  PRICE: 6.00</div><div class="m b">✅ Menu published!
+
+🔗 https://luis-serrano-l.github.io/decarta-site/menu/0busTosNoBxlL02VE
+
+The page updates in about a minute. Use /link anytime to get this link again, or /qr for a QR code.<div class="r"><div class="k">Open my menu</div></div><div class="r"><div class="k">Get QR code</div></div></div></div></foreignObject></g>
+<g class="f" style="animation-name:f7"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
+📄 Send me the menu as a file or as text and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+- ITEM: Bruschetta
+  PRICE: 6.50
+  DESCRIPTION: Tomato, basil, olive oil
+- ITEM: Burrata
+  PRICE: 9.00
+
+CATEGORY: Pasta
+- ITEM: Carbonara
+  PRICE: 12.50
+- ITEM: Cacio e pepe
+  PRICE: 11.00
+
+CATEGORY: Dolci
+- ITEM: Tiramisù
+  PRICE: 6.00</div><div class="m b">✅ Menu published!
+
+🔗 https://luis-serrano-l.github.io/decarta-site/menu/0busTosNoBxlL02VE
+
+The page updates in about a minute. Use /link anytime to get this link again, or /qr for a QR code.<div class="r"><div class="k">Open my menu</div></div><div class="r"><div class="k p">Get QR code</div></div></div></div></foreignObject></g>
+<g class="f" style="animation-name:f8"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
+📄 Send me the menu as a file or as text and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+- ITEM: Bruschetta
+  PRICE: 6.50
+  DESCRIPTION: Tomato, basil, olive oil
+- ITEM: Burrata
+  PRICE: 9.00
+
+CATEGORY: Pasta
+- ITEM: Carbonara
+  PRICE: 12.50
+- ITEM: Cacio e pepe
+  PRICE: 11.00
+
+CATEGORY: Dolci
+- ITEM: Tiramisù
+  PRICE: 6.00</div><div class="m b">✅ Menu published!
+
+🔗 https://luis-serrano-l.github.io/decarta-site/menu/0busTosNoBxlL02VE
+
+The page updates in about a minute. Use /link anytime to get this link again, or /qr for a QR code.<div class="r"><div class="k">Open my menu</div></div><div class="r"><div class="k">Get QR code</div></div></div><div class="m b"><img alt="QR code" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAhwAAAIcAQAAAACVhUrRAAAAJHRFWHRTb2Z0d2FyZQBRUi1QTkcgaHR0cDovL3FyLnN3dGNoLmNvbS9nj329AAAMBklEQVR4AWP4TwUwasioIaOGjBoyasioIaOGjBoyasioIaOGjBoyCA1h+P///////xkYGBgYGBgYGBj4////wMDAwMDAwPD/AwMD//////8zMDAw8P////8/A///////MzAwMDAwMDAwMPD/////////o4aMGjICDWH4////////Gfj//////////wz8/xn4////////B4b/HxgYGBgYGBgYGBj+f2D4/////w8MDPz/Gfj//////////wz8/////////6gho4aMQEMY/v//////fwb+/wwMDAz8/xn4////////BwYGBgYGBgYG/v8M/P8Z+P///8Dw//9/BgYGBv7/DPz/GRgYGPj/M/D/////////o4aMGjICDWH4////////Gfj/MzAwMPD/Z+D/////fwb+/////////z8D/38GBob///8zMDD8//+fgYGBgf8/A/9/BgYGBv7/DPz/////////qCGjhoxAQxj+//////9/Bv7/DAwMDPz/Gfj/MzAwMPD/Z2Bg+P+BgYGBgYGB4f////8/MPz/wPD/A8P///8Z+P8zMDAw8P9n4P////////9HDRk1ZAQawvD///////8z8P//////////Gfj///////8Hhv8fGBgYGP7//8/AwMDAwMDAwMDA/5+BgYGB/z8D//////////+fgf////////8fNWTUkBFoCMP////////PwMDAwMDAwMDAwP+fgf8/A/9/Bv7/DPz/Gfj/M/D/Z+D/z8D/n4H/PwP/fwb+/wwMDAwMDAwMDAz8/////////6gho4aMQEMY/v///////////////////////////4GBgYGBgf8/A///////////n4GBgYH/PwMDw/8PDAz8//////////////////////////+PGjJqyAg0hOH///////9n4P/PwP+fgf8/A////x8YGBgYGPj///////////8/MDDw/2fg////A8P///////////9/Bv7//z8w/P//////////jxoyasgINITh////////Z2Bg+P+B4f8Hhv///zPw////geH/BwYGBob/Hxj+f2BgYGD4/4GBgYHh////DPz/GRgY/v//////fwb+////////f9SQUUNGoCEM////////PwMDAwP/fwb+/wwMDP8/MPz//5+B/////////////wMDA///////MzAwMPD///+B4f8Hhv8fGBgYGBj4/////////1FDRg0ZgYYw/P///////////////z8DA8P/////f2BgYGD4/////w8M/z8wMPD/Z2Bg+P////8PDP///2dgYPj//z8DA8P/Dwz///////////+jhowaMgINYfj/////////f2Bg4P/PwP+fgYGBgf//////////z8D///8Hhv8fGBgYGP7//8/AwPD/AwMDAwMD/////////8DAwP////////+PGjJqyAg0hOH///////9n4P/PwP///////z8wMPD/Z+D/z8D//////wwMDP////////////8Z+P////+fgf8/A//////////AwMD/////////jxoyasgINITh////////Z+D///8Dw////xkYGBj4/zPw/////z8D//////8z8P///4Hh////DAwM////////PwMDw////xkYGBj4/////////1FDRg0ZgYYw/P//////////////geH/////PzD8/////wcGBv7//z8wMDAwMPD/Z+D/////fwYGBgb+//8/MPz//5+B////Dwz///////////+jhowaMgINYfj////////////PwP///wcGBv7/DAwM/z8wMPD/Z2BgYOD/z8DA8P////8fGP7//////38GBgYG/v//PzD8/8DAwP////////+PGjJqyAg0hOH//////////4GBgYGBgf///////39g+P//PwMDw/8PDAwMDAwMDP//////////Dwz///9nYGBgYGD4//8/A/9/Bv7///////9/1JBRQ0agIQz///////8/AwPD/w8MDAwMDPz/GRgY/n9gYOD///8DAwMDAwP//////zPw/2fg/8/A/5+BgYGBgYGBgeH/BwYG/v///////3/UkFFDRqAhDP///////z8DAwMDA8P/////f2Bg4P/PwP+fgYHh////DAwMDAwM/z8w/P/A8P8DAwMDAwP/////////////B4b///////////9RQ0YNGYGGMPz///////8MDAz/PzD8//+fgYHh/weG////M/D///+BgYGB4f///wwMDP///2dgYPj/////DwwM/P//////////////////////UUNGDRmBhjD8////////DAwM//////+B4f8HBgYGhv///zPw///////////////PwMDAwP///weG////MzAwMDAw/P/A8P//fwb+////////f9SQUUNGoCEM/////////////xn4/zMwMDAwMPz//5+B////Dwz//////4Hh////////Z+D/z8DAwMD//////wwMDP///2dgYGDg/////////0cNGTVkBBrC8P///////zMwMPz/wPD///////////+fgYGBgYGBgYHh/////z8w/P/AwMDAwMDA8P8DAwMDAwP/fwb+/////////////////x81ZNSQEWgIw/////////////////8zMDAw8P9n4P///wPD/w8MDPz///////8DAwP/fwYGhv8fGP5/YPj/gYGBgeH/B4b///////////////+PGjJqyAg0hOH//////////4GBgf///////39gYGBgYGBgYGBg+P+B4f8Hhv8fGBgYGBj4/////5+BgYGB/z8D//////8zMDAw8P////////+jhowaMgINYfj///////8Z+P8z8P9n4P/PwP///wcGBgaG////M/D/////PwMDAwP//////zMwMPz//////////////4GBgYGBgf////////8fNWTUkBFoCMP//////////wPD////Gfj////A8P//fwYGBgb+/wwMDP8/MDDw/2dgYGBgYGBgYPj////////////PwP///weG////////////UUNGDRmBhjD8////////DPz/Gfj////AwMD/n4GB4f8Hhv8fGP7//8/AwPD/AwMDA8P/DwwMDAz///9nYGBgYGBg4P///wMDA/////////8/asioISPQEIb//////////////////////////xn4////wMDA/5+B/z8DAwMD/38G/v////9n4P///wMDA///////MzAw/P/AwMD/////////jxoyasgINITh////////Z2BgYGBgYGBgYOD/////fwYGBgb+/wz8/xn4/zPw/2dgYPj///////8ZGBgY+P8z8P9nYGD4/4GBgf////////8fNWTUkBFoCMP////////PwP//////////Z+D///8Dw////xkYGBgYGBgYGBj4/zPw////gYGBgeH/BwYG/v////9nYGD4//8/A/////////8/asioISPQEIb///////+fgf8/AwMDA/9/Bv7/DAwM/z8w/P/AwMD/n4H/PwMDw/////9/YGBgYPj//z8DAwMDAwMDA8P///8Z+P////////9RQ0YNGYGGMPz///////8M/P8ZGBgY+P8z8P///4GBgf//////GRgYGBgYGBgY/n9g+P+BgYH//////xn4////wMDA////B4b///////////9RQ0YNGYGGMPz///////8M/P8ZGBgY+P8z8P9n4P///////x8Y/n9gYGBgYOD///8DAwP/fwYGhv///zMwMPz//5+BgYGBgYGB/////////x81ZNSQEWgIw////////8/A//////////9n4P///wMDAwMDAwPD////GRgY/n9g+P+B4f8HBgYGBgb+/wz8//9/YGDg////A8P///////////+oIaOGjEBDGP7//////38GBgYGBgYGBgYG/v8M/P8Z+P////+fgYHh/weG////MzAwMDAwMDAwMDAwMDAwMPD///////8PDAz8/////////6gho4aMQEMY/lMBjBoyasioIaOGjBoyasioIaOGjBoyasioIaOGDEJDAJ+1tFrqPGWeAAAAAElFTkSuQmCC"/>📱 QR code for your menu:
+https://luis-serrano-l.github.io/decarta-site/menu/0busTosNoBxlL02VE
+
+Print it or show it on a screen. Your customers scan it with their phone camera.</div></div></foreignObject></g>
+<rect width="400" height="60" fill="#fde5d4"/><circle cx="36" cy="30" r="18" fill="#b23a0a"/><text x="36" y="36" text-anchor="middle" style="font:700 17px system-ui,sans-serif;fill:#fff">d</text><text class="h" x="66" y="27">decarta-bot</text><text class="s" x="66" y="46">bot</text>
+</g><rect x="0.5" y="0.5" width="399" height="759" rx="28" fill="none" stroke="#b79f8c"/>
+</svg>
