@@ -9,8 +9,27 @@ description: |
   page. /qr returns a QR code of the page for the tables.
 
   The snap runs the bot as a service. It is installed stopped, because
-  it needs a configuration first. Write it to
-  /var/snap/decarta-bot/common/.env, then start the service.
+  it needs a configuration first.
+
+  **Configure**
+
+  Create the file, readable by root only because it holds two tokens:
+
+      sudo install -m 600 /dev/null /var/snap/decarta-bot/common/.env
+      sudoedit /var/snap/decarta-bot/common/.env
+
+  Put these lines in it, with your own values:
+
+      TELEGRAM_BOT_TOKEN=<the token @BotFather gave you>
+      HASH_SECRET=<32 or more random characters, e.g. from "openssl rand -hex 32">
+      GITHUB_TOKEN=<a fine-grained token with "Contents: Read and write" on the site repository only>
+      GITHUB_REPO=<owner/name of your copy of decarta-site>
+      HUGO_BASE_URL=<https address of that site>
+      ADMIN_USER_IDS=<your Telegram user ID; send /myid to the bot to see it>
+
+  The first five are required. Without ADMIN_USER_IDS the bot runs but
+  nobody may publish. Do not change HASH_SECRET later: it changes every
+  menu address.
 
   **Commands**
 
@@ -21,7 +40,7 @@ description: |
       snap services decarta-bot               # is it running?
       snap run decarta-bot --version          # which version is installed
 
-  The variables for .env and the full guide are at
+  The optional variables, how to create the two tokens and the full guide:
   https://github.com/luis-serrano-l/decarta-bot/blob/main/docs/how-to/run-as-snap.md
 license: MIT
 website: https://github.com/luis-serrano-l/decarta-bot
