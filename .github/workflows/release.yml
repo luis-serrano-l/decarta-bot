@@ -1,0 +1,100 @@
+name: Release
+
+# Pushing a tag such as v1.2.3 publishes the binaries and the container
+# image for that version. The tag must have a section in CHANGELOG.md,
+# which becomes the release notes.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.ref_name }}
+
+jobs:
+  binaries:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # create the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Release notes from the changelog
+        run: |
+          version="${TAG#v}"
+          awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "CHANGELOG.md has no section for $version" >&2
+            exit 1
+          fi
+      - name: go test
+        run: go test -count=1 ./...
+      - name: Build
+        run: |
+          version="${TAG#v}"
+          mkdir dist
+          for arch in amd64 arm64; do
+            CGO_ENABLED=0 GOOS=linux GOARCH="$arch" \
+              go build -trimpath -ldflags="-s -w -X main.version=$version" -o decarta-bot .
+            tar -czf "dist/decarta-bot_${version}_linux_${arch}.tar.gz" decarta-bot LICENSE README.md
+          done
+          (cd dist && sha256sum -- *.tar.gz > checksums.txt)
+      - name: The binary reports the tagged version
+        run: |
+          version="${TAG#v}"
+          tar -xzf "dist/decarta-bot_${version}_linux_amd64.tar.gz" -C "$RUNNER_TEMP" decarta-bot
+          test "$("$RUNNER_TEMP/decarta-bot" --version)" = "decarta-bot $version"
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$TAG" dist/* --verify-tag --title "$TAG" --notes-file notes.md
+
+  image:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write # push to ghcr.io
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Image tags
+        id: tags
+        run: |
+          version="${TAG#v}"
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          {
+            echo "version=$version"
+            echo "list=$image:$version,$image:${version%.*},$image:latest"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          build-args: VERSION=${{ steps.tags.outputs.version }}
+          tags: ${{ steps.tags.outputs.list }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.tags.outputs.version }}
+            org.opencontainers.image.licenses=MIT
+          push: true

@@ -62,3 +62,10 @@ These are not configurable:
 endpoint reports liveness, so it stays `200` while the bot retries a bad
 token: restarting the container would not fix that. The image's
 `HEALTHCHECK` calls it through `decarta-bot -healthcheck`.
+
+## Command-line flags
+
+| Flag | Effect |
+|---|---|
+| `--version` | Prints `decarta-bot <version>` and exits. Release builds carry their version; a plain `go build` prints `dev`. The same value is in the "starting" log line. |
+| `-healthcheck` | Requests `/health` on the local `PORT` and exits 0 if it answers `200`. Used by the image's `HEALTHCHECK`. |

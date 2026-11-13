@@ -41,13 +41,23 @@ const (
 	shutdownGrace    = 10 * time.Second
 )
 
+// version is set at build time with -ldflags "-X main.version=1.2.3". A
+// plain "go build" or "go run" leaves it as "dev".
+var version = "dev"
+
 func main() {
 	os.Exit(run())
 }
 
 func run() int {
 	healthcheck := flag.Bool("healthcheck", false, "probe the local /health endpoint and exit 0 if healthy (used by the container HEALTHCHECK)")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println("decarta-bot", version)
+		return 0
+	}
 
 	// A .env file is a convenience for local runs; in containers the
 	// environment is injected and the file does not exist.
@@ -125,6 +135,7 @@ func serve(cfg *config.Config, logger *slog.Logger) error {
 	defer stop()
 
 	logger.Info("starting",
+		"version", version,
 		"port", cfg.Port,
 		"repo", cfg.GitHubRepo,
 		"branch", cfg.GitHubBranch,

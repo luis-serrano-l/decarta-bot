@@ -1,5 +1,7 @@
 # Build stage. Base images are pinned by digest; Dependabot proposes updates.
-FROM golang:1.27.4-alpine@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS build
+# It runs on the build machine's own architecture and cross-compiles, so a
+# multi-architecture build needs no emulation.
+FROM --platform=$BUILDPLATFORM golang:1.27.4-alpine@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS build
 
 WORKDIR /src
 
@@ -7,7 +9,11 @@ COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/decarta-bot . \
+# VERSION is what "decarta-bot --version" prints; the release workflow sets it.
+ARG VERSION=dev
+ARG TARGETOS TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -trimpath -ldflags="-s -w -X main.version=$VERSION" -o /out/decarta-bot . \
     && mkdir /out/data
 
 # Runtime stage: no shell, no package manager, CA certificates included.
