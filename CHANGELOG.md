@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The snap's Store description lists the commands to start, restart,
-  stop and inspect the service, and links to the how-to.
+- The snap's Store description says what to put in the `.env` file and
+  lists the commands to start, restart, stop and inspect the service.
 
 ## [1.1.0] - 2026-11-13
 
