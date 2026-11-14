@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 const id = "0Aa1Bb2Cc3Dd4Ee5F"
@@ -69,6 +70,66 @@ func TestFileDelete(t *testing.T) {
 	}
 	if err := s.Delete("../../../etc/pwd0"); !errors.Is(err, ErrInvalidID) {
 		t.Errorf("Delete(bad id) error = %v, want ErrInvalidID", err)
+	}
+}
+
+func TestFileLoad(t *testing.T) {
+	s, err := NewFile(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Load(id); !errors.Is(err, ErrNotFound) {
+		t.Errorf("Load() before any save: error = %v, want ErrNotFound", err)
+	}
+	if err := s.Save(id, []byte("menu")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Load(id)
+	if err != nil || string(got) != "menu" {
+		t.Errorf("Load() = %q, %v; want %q, nil", got, err, "menu")
+	}
+	if _, err := s.Load("../../../etc/pwd0"); !errors.Is(err, ErrInvalidID) {
+		t.Errorf("Load(bad id) error = %v, want ErrInvalidID", err)
+	}
+}
+
+func TestFilePrune(t *testing.T) {
+	const fresh = "1Aa1Bb2Cc3Dd4Ee5F"
+	dir := t.TempDir()
+	s, err := NewFile(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{id, fresh} {
+		if err := s.Save(name, []byte("x")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Not a stored copy: must survive however old it is.
+	other := filepath.Join(dir, "notes.txt")
+	if err := os.WriteFile(other, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	old := now.Add(-8 * 24 * time.Hour)
+	for _, path := range []string{filepath.Join(dir, id+".json"), other} {
+		if err := os.Chtimes(path, old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	removed, err := s.Prune(now.Add(-7 * 24 * time.Hour))
+	if err != nil || removed != 1 {
+		t.Fatalf("Prune() = %d, %v; want 1, nil", removed, err)
+	}
+	if s.Has(id) {
+		t.Error("the old copy was not removed")
+	}
+	if !s.Has(fresh) {
+		t.Error("the fresh copy was removed")
+	}
+	if _, err := os.Stat(other); err != nil {
+		t.Errorf("an unrelated file was removed: %v", err)
 	}
 }
 

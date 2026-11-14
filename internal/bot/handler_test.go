@@ -22,6 +22,7 @@ import (
 	"github.com/luis-serrano-l/decarta-bot/internal/menuid"
 	"github.com/luis-serrano-l/decarta-bot/internal/publisher"
 	"github.com/luis-serrano-l/decarta-bot/internal/ratelimit"
+	"github.com/luis-serrano-l/decarta-bot/internal/store"
 )
 
 const (
@@ -226,6 +227,16 @@ func (s *memStore) Save(id string, content []byte) error {
 	}
 	s.saved[id] = content
 	return nil
+}
+
+func (s *memStore) Load(id string) ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	content, ok := s.saved[id]
+	if !ok {
+		return nil, store.ErrNotFound
+	}
+	return content, nil
 }
 
 func (s *memStore) Delete(id string) error {
