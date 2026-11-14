@@ -59,9 +59,10 @@ func NewClient(token, apiBase string, log *slog.Logger) *Client {
 func (c *Client) Connected() bool { return c.connected.Load() }
 
 // Run authenticates, then delivers updates to handle until ctx is
-// cancelled. Authentication failures (bad token, no network) are retried
-// with backoff rather than treated as fatal, so a container with a
-// misconfigured token stays up, visibly unconnected, instead of crash
+// cancelled. It returns once the updates in flight have been handled; their
+// context is not cancelled. Authentication failures (bad token, no network)
+// are retried with backoff rather than treated as fatal, so a container with
+// a misconfigured token stays up, visibly unconnected, instead of crash
 // looping.
 func (c *Client) Run(ctx context.Context, handle func(context.Context, tgbotapi.Update)) error {
 	if err := c.connect(ctx); err != nil {
@@ -97,7 +98,14 @@ func (c *Client) Run(ctx context.Context, handle func(context.Context, tgbotapi.
 			if !ok {
 				return nil
 			}
-			sem <- struct{}{}
+			// Wait for a free worker, but not past a shutdown: an update
+			// that is never handled is delivered again after a restart.
+			select {
+			case <-ctx.Done():
+				c.api.StopReceivingUpdates()
+				return nil
+			case sem <- struct{}{}:
+			}
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -108,7 +116,10 @@ func (c *Client) Run(ctx context.Context, handle func(context.Context, tgbotapi.
 						c.log.Error("panic while handling an update", "panic", fmt.Sprint(r))
 					}
 				}()
-				handle(ctx, update)
+				// An update already being handled runs to completion: a
+				// shutdown must not abort a publish half way. The caller
+				// bounds how long it waits for Run to return.
+				handle(context.WithoutCancel(ctx), update)
 			}()
 		}
 	}

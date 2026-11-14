@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A publish that fails no longer counts towards the publish rate limit.
+- `/request_access` can be sent again straight away when no administrator
+  could be reached, as the reply says.
+- When unpublishing fails after a newer menu was sent, the reply says to
+  send `/delete` again instead of pointing to a button that has expired.
+- On shutdown, updates already being handled finish instead of being
+  cancelled half way, and an update waiting for a free worker is left for
+  the next start.
+- The local copy of a menu is flushed to disk before it replaces the old
+  one.
+
 ### Changed
 
 - The snap's Store description says what to put in the `.env` file and

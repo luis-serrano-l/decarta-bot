@@ -137,3 +137,43 @@ func TestConcurrent(t *testing.T) {
 		t.Errorf("allowed %d events, want exactly %d", allowed, limit)
 	}
 }
+
+func TestUndo(t *testing.T) {
+	c := &clock{t: time.Unix(1_700_000_000, 0)}
+	l := New(2, time.Hour, c.now)
+
+	l.Undo("a") // nothing recorded: no effect
+	for i := 0; i < 2; i++ {
+		if ok, _ := l.Allow("a"); !ok {
+			t.Fatalf("Allow %d denied", i+1)
+		}
+	}
+	if ok, _ := l.Allow("a"); ok {
+		t.Fatal("third Allow was not denied")
+	}
+
+	// Taking one back frees exactly one slot, and leaves other keys alone.
+	if ok, _ := l.Allow("b"); !ok {
+		t.Fatal("Allow for another key denied")
+	}
+	l.Undo("a")
+	if ok, _ := l.Allow("a"); !ok {
+		t.Error("Allow denied after Undo")
+	}
+	if ok, _ := l.Allow("a"); ok {
+		t.Error("Undo freed more than one slot")
+	}
+	if ok, _ := l.Allow("b"); !ok {
+		t.Error("Undo for one key changed another")
+	}
+
+	// The retry time still comes from the oldest event that is left.
+	c.advance(10 * time.Minute)
+	l.Undo("a")
+	if ok, _ := l.Allow("a"); !ok {
+		t.Fatal("Allow denied after the second Undo")
+	}
+	if _, retry := l.Allow("a"); retry != 50*time.Minute {
+		t.Errorf("retryAfter = %v, want 50m", retry)
+	}
+}

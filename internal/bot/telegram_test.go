@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -513,4 +514,48 @@ func waitFor(t *testing.T, what string, cond func() bool) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	t.Fatalf("timed out waiting for %s", what)
+}
+
+func TestRunShutdownSparesUpdatesInFlightAndStartsNoNewOnes(t *testing.T) {
+	tg := &fakeTelegram{t: t}
+	for i := 0; i <= maxWorkers; i++ { // one more than the workers
+		tg.updates = append(tg.updates, tgbotapi.Update{UpdateID: i + 1, Message: textUpdate(adminID, "/start").Message})
+	}
+	srv := httptest.NewServer(tg)
+	defer srv.Close()
+	client := NewClient(fakeToken, srv.URL, slog.New(slog.NewTextHandler(&syncBuffer{}, nil)))
+
+	var started, cancelled atomic.Int32
+	release := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() {
+		done <- client.Run(ctx, func(hctx context.Context, _ tgbotapi.Update) {
+			started.Add(1)
+			<-release
+			if hctx.Err() != nil {
+				cancelled.Add(1)
+			}
+		})
+	}()
+	waitFor(t, "every worker to be busy", func() bool { return started.Load() == maxWorkers })
+
+	cancel()
+	time.Sleep(50 * time.Millisecond) // let Run see the shutdown
+	close(release)
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Errorf("Run() = %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run did not return after the shutdown")
+	}
+	if n := started.Load(); n != maxWorkers {
+		t.Errorf("%d updates were handled, want %d: the one waiting for a worker must be dropped", n, maxWorkers)
+	}
+	if n := cancelled.Load(); n != 0 {
+		t.Errorf("%d updates in flight had their context cancelled", n)
+	}
 }
