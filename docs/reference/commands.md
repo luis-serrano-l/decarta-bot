@@ -71,7 +71,8 @@ Rules that apply to **Publish**, **Yes, delete it** and **Cancel**:
 
 Each user may publish `PUBLISH_RATE_LIMIT` times per `PUBLISH_RATE_WINDOW`
 (5 per hour by default). Only a tap on **Publish** counts towards it:
-previews, rejected menus, cancels and deletes do not.
+previews, rejected menus, cancels and deletes do not, and neither does a
+publish that fails.
 
 Uploads have their own, looser limit: 20 menus checked per user per 10
 minutes, valid or not. It is not configurable. Past it the bot says when

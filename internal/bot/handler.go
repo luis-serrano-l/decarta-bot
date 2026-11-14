@@ -394,6 +394,8 @@ func (h *Handler) requestAccess(u user, from *tgbotapi.User) {
 	}
 	h.log.Info("access requested", "id", u.id, "admins_notified", notified)
 	if notified == 0 {
+		// Nobody was pinged, so the user may ask again straight away.
+		h.requestLimit.Undo(u.id)
 		h.reply(u, "❌ Could not reach the administrators. Please try again later.")
 		return
 	}
@@ -590,7 +592,7 @@ func (h *Handler) confirmPublish(ctx context.Context, u user, msgID int, nonce s
 	}
 
 	// Only confirmed, valid menus count against the limit, so previews and
-	// fixing typos are free.
+	// fixing typos are free. A publish that fails is given back below.
 	if ok, retry := h.publishLimit.Allow(u.id); !ok {
 		// Keep the draft until the wait is over, so the same button works.
 		p.expires = h.now().Add(retry + confirmTTL)
@@ -608,6 +610,7 @@ func (h *Handler) confirmPublish(ctx context.Context, u user, msgID int, nonce s
 	stop()
 	if err != nil {
 		h.log.Error("publish failed", "id", u.id, "err", err)
+		h.publishLimit.Undo(u.id) // nothing went online: trying again is free
 		if !h.restore(u.id, p) {
 			h.reply(u, "❌ That menu could not be published right now. Your newer preview is still waiting.")
 			return
@@ -643,8 +646,12 @@ func (h *Handler) confirmDelete(ctx context.Context, u user, msgID int, nonce st
 	cancel()
 	stop()
 	if err != nil && !errors.Is(err, publisher.ErrNotFound) {
-		h.restore(u.id, p)
 		h.log.Error("delete failed", "id", u.id, "err", err)
+		if !h.restore(u.id, p) {
+			// A newer preview took the slot, so this button is spent.
+			h.reply(u, "❌ Your menu could not be unpublished right now. Send /delete to try again in a moment.")
+			return
+		}
 		h.reply(u, "❌ Your menu could not be unpublished right now. Tap the button to try again in a moment.")
 		return
 	}

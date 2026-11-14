@@ -65,6 +65,22 @@ func (l *Limiter) Allow(key string) (ok bool, retryAfter time.Duration) {
 	return true, 0
 }
 
+// Undo takes back the most recent event recorded for key, for a caller whose
+// allowed action then failed and should not count. It does nothing if key
+// has no recorded events.
+func (l *Limiter) Undo(key string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	hits := l.hits[key]
+	switch len(hits) {
+	case 0:
+	case 1:
+		delete(l.hits, key)
+	default:
+		l.hits[key] = hits[:len(hits)-1]
+	}
+}
+
 // sweep drops keys whose events have all expired so the map cannot grow
 // without bound. Called with mu held.
 func (l *Limiter) sweep(cutoff time.Time) {

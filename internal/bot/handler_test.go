@@ -62,6 +62,7 @@ type fakeMessenger struct {
 	touched   map[int64]*sentMessage // last message sent or edited, per chat
 	files     map[string][]byte
 	sendErr   error
+	sendErrTo map[int64]error // per chat
 	editErr   error
 	fileErr   error
 	photoErr  error
@@ -86,6 +87,9 @@ func (f *fakeMessenger) Send(chatID int64, text string, rows ...[]Button) error 
 	defer f.mu.Unlock()
 	if f.sendErr != nil {
 		return f.sendErr
+	}
+	if err := f.sendErrTo[chatID]; err != nil {
+		return err
 	}
 	f.add(chatID, &sentMessage{text: text, rows: rows})
 	return nil
@@ -709,6 +713,74 @@ func TestPublishFailureKeepsThePreview(t *testing.T) {
 	}
 }
 
+func TestFailedPublishDoesNotCountAgainstTheLimit(t *testing.T) {
+	f := newFixture(t) // limit: 2 per hour
+	f.pub.Err = errors.New("github: down")
+	f.send(allowedID, validList)
+	for i := 0; i < 5; i++ {
+		f.press(allowedID, "Publish")
+		if got := f.tg.last(allowedID); !strings.Contains(got, "Tap Publish to try again") {
+			t.Fatalf("failed publish %d: reply = %q", i+1, got)
+		}
+	}
+	f.pub.Err = nil
+	f.press(allowedID, "Publish")
+	f.publish(allowedID)
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Menu published") {
+		t.Errorf("second publish after the failures: reply = %q", got)
+	}
+	if f.pub.Calls() != 7 {
+		t.Errorf("publisher calls = %d, want 7", f.pub.Calls())
+	}
+}
+
+// slowDeleter blocks each Delete until released.
+type slowDeleter struct {
+	*publisher.Fake
+	started chan struct{}
+	release chan struct{}
+}
+
+func (s *slowDeleter) Delete(ctx context.Context, id string) error {
+	s.started <- struct{}{}
+	<-s.release
+	return s.Fake.Delete(ctx, id)
+}
+
+func TestFailedDeleteAfterANewerPreviewPointsToTheCommand(t *testing.T) {
+	f := newFixture(t)
+	f.publish(allowedID)
+	slow := &slowDeleter{Fake: f.pub, started: make(chan struct{}), release: make(chan struct{})}
+	f.h.pub = slow
+
+	f.send(allowedID, "/delete")
+	msgID, yes, _ := f.tg.button(allowedID, "Yes, delete it")
+	f.pub.Err = errors.New("github: down")
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		f.h.Handle(context.Background(), callbackUpdate(allowedID, msgID, "cb-slow", yes.Data))
+	}()
+	<-slow.started
+
+	// A menu sent while the delete is running takes the pending slot, so
+	// the delete button cannot be restored when the delete fails.
+	f.send(allowedID, validList)
+	slow.release <- struct{}{}
+	<-done
+	got := f.tg.last(allowedID)
+	if !strings.Contains(got, "could not be unpublished") || !strings.Contains(got, "Send /delete") || strings.Contains(got, "Tap the button") {
+		t.Errorf("failure reply = %q", got)
+	}
+
+	// The newer preview is untouched.
+	f.pub.Err = nil
+	f.press(allowedID, "Publish")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Menu published") {
+		t.Errorf("newer preview: %q", got)
+	}
+}
+
 // slowPublisher blocks each Publish until released, to test what happens
 // while one is in flight.
 type slowPublisher struct {
@@ -1241,6 +1313,25 @@ func TestRequestAccess(t *testing.T) {
 		t.Errorf("admin received %d notifications, want 1", n)
 	}
 	assertNoRawIDs(t, f.logs.String())
+}
+
+func TestRequestAccessCanBeRetriedWhenNoAdminWasReached(t *testing.T) {
+	f := newFixture(t)
+	f.tg.sendErrTo = map[int64]error{adminID: errors.New("telegram: send message: Forbidden")}
+	f.send(strangerID, "/request_access")
+	if got := f.tg.last(strangerID); !strings.Contains(got, "try again later") {
+		t.Fatalf("reply = %q", got)
+	}
+
+	// The failed attempt did not use up the hourly request.
+	f.tg.sendErrTo = nil
+	f.send(strangerID, "/request_access")
+	if got := f.tg.last(strangerID); !strings.Contains(got, "request was sent") {
+		t.Errorf("retry reply = %q", got)
+	}
+	if n := f.tg.count(adminID); n != 1 {
+		t.Errorf("admin received %d notifications, want 1", n)
+	}
 }
 
 func TestRequestAccessWithoutAdmins(t *testing.T) {

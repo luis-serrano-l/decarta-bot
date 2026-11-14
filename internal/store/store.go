@@ -60,6 +60,12 @@ func (f *File) Save(id string, content []byte) error {
 		_ = tmp.Close()
 		return fmt.Errorf("store: write: %w", err)
 	}
+	// Flushed before the rename, so a crash cannot leave an empty file
+	// under the final name.
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("store: sync: %w", err)
+	}
 	if err := tmp.Close(); err != nil {
 		return fmt.Errorf("store: close: %w", err)
 	}
