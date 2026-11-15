@@ -554,13 +554,15 @@ func TestSubmitAndConfirm(t *testing.T) {
 	}
 }
 
-func TestPreviewSummarisesTheMenu(t *testing.T) {
+func TestPreviewListsTheMenu(t *testing.T) {
 	f := newFixture(t)
 	f.send(allowedID, "CATEGORY: Starters\n- ITEM: Soup\n  PRICE: 4.5\n- ITEM: Bread\n  PRICE: 2\nCATEGORY: Mains\n- ITEM: Fish\n  PRICE: 18.9\nCATEGORY: Drinks")
 	got := f.tg.last(allowedID)
 	for _, want := range []string{
-		"• Starters (2 items)", "• Mains (1 item)", "• Drinks (0 items)",
-		"Categories: 3", "Items: 3", "Prices: 2.00 to 18.90", "Publish it?",
+		"📂 Starters\n   • Soup  4.50\n   • Bread  2.00",
+		"📂 Mains\n   • Fish  18.90",
+		"📂 Drinks\n   No dishes yet.",
+		"Publish it?",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("preview does not contain %q:\n%s", want, got)
@@ -573,12 +575,11 @@ func TestPreviewSummarisesTheMenu(t *testing.T) {
 		t.Error("no typing indicator was shown while the menu was checked")
 	}
 
-	// A single price is not shown as a range; a second menu warns that it
-	// replaces the first.
+	// A second menu warns that it replaces the first.
 	f.press(allowedID, "Publish")
 	f.send(allowedID, validList)
 	got = f.tg.last(allowedID)
-	if !strings.Contains(got, "Price: 4.50") || !strings.Contains(got, "replaces the menu that is online now") {
+	if !strings.Contains(got, "• Soup  4.50") || !strings.Contains(got, "replaces the menu that is online now") {
 		t.Errorf("second preview:\n%s", got)
 	}
 }

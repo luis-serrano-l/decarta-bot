@@ -65,15 +65,18 @@ CATEGORY: Pasta
 
 CATEGORY: Dolci
 - ITEM: Tiramisù
-  PRICE: 6.00</div><div class="m b">📋 Your menu is valid. Here is what I read:
+  PRICE: 6.00</div><div class="m b">📋 Your menu is valid. This is what will be published:
 
-• Antipasti (2 items)
-• Pasta (2 items)
-• Dolci (1 item)
+📂 Antipasti
+   • Bruschetta  6.50
+   • Burrata  9.00
 
-Categories: 3
-Items: 5
-Prices: 6.00 to 12.50
+📂 Pasta
+   • Carbonara  12.50
+   • Cacio e pepe  11.00
+
+📂 Dolci
+   • Tiramisù  6.00
 
 Publish it?<div class="r"><div class="k">Publish</div><div class="k">Cancel</div></div></div></div></foreignObject></g>
 <g class="f" style="animation-name:f5"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
@@ -93,15 +96,18 @@ CATEGORY: Pasta
 
 CATEGORY: Dolci
 - ITEM: Tiramisù
-  PRICE: 6.00</div><div class="m b">📋 Your menu is valid. Here is what I read:
+  PRICE: 6.00</div><div class="m b">📋 Your menu is valid. This is what will be published:
 
-• Antipasti (2 items)
-• Pasta (2 items)
-• Dolci (1 item)
+📂 Antipasti
+   • Bruschetta  6.50
+   • Burrata  9.00
 
-Categories: 3
-Items: 5
-Prices: 6.00 to 12.50
+📂 Pasta
+   • Carbonara  12.50
+   • Cacio e pepe  11.00
+
+📂 Dolci
+   • Tiramisù  6.00
 
 Publish it?<div class="r"><div class="k p">Publish</div><div class="k">Cancel</div></div></div></div></foreignObject></g>
 <g class="f" style="animation-name:f6"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.

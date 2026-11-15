@@ -64,14 +64,18 @@ func TestBuilderFirstMenu(t *testing.T) {
 	}
 
 	f.press(allowedID, "Starters")
-	if got := f.tg.last(allowedID); !strings.Contains(got, "✅ Section Starters added.") || !strings.Contains(got, "Adding to Starters") {
+	if got := f.tg.last(allowedID); !strings.Contains(got, "✅ Section Starters added.") ||
+		!strings.Contains(got, "➕ Add a dish to Starters\n✍️ Write it in the message box below 👇 and send it") {
 		t.Fatalf("after the chip = %q", got)
 	}
 
 	f.send(allowedID, "Gazpacho 6.50\nCroquetas 8")
 	if got := f.tg.last(allowedID); !strings.Contains(got, "✅ Added 2 dishes to Starters.") ||
-		!strings.Contains(got, "• Gazpacho  6.50") || !strings.Contains(got, "📂 Starters (2)") {
+		!strings.Contains(got, "📂 Starters\n   • Gazpacho  6.50\n   • Croquetas  8.00") {
 		t.Fatalf("after two dishes = %q", got)
+	}
+	if got := labels(f.tg.lastMsg(allowedID)); !slices.Equal(got, []string{"📝 Describe last dish", "⬅️ Back to menu"}) {
+		t.Fatalf("add-dish buttons = %q", got)
 	}
 
 	f.press(allowedID, "📝 Describe last dish")
@@ -80,12 +84,25 @@ func TestBuilderFirstMenu(t *testing.T) {
 	}
 	f.send(allowedID, "Ham, six pieces")
 
+	f.press(allowedID, "⬅️ Back to menu")
+	if got := labels(f.tg.lastMsg(allowedID)); !slices.Equal(got, []string{
+		"➕ Add dish", "📂 Add section", "✏️ Edit dishes", "✏️ Edit sections", "✅ Done, preview", "Cancel"}) {
+		t.Fatalf("home buttons = %q", got)
+	}
 	f.press(allowedID, "📂 Add section")
-	if got := labels(f.tg.lastMsg(allowedID)); !slices.Equal(got, []string{"Mains", "Desserts", "Drinks", "⬅️ Back"}) {
+	if got := labels(f.tg.lastMsg(allowedID)); !slices.Equal(got, []string{"Mains", "Desserts", "Drinks", "⬅️ Back to menu"}) {
 		t.Fatalf("second section buttons = %q", got)
 	}
 	f.send(allowedID, "  Rice dishes ")
 	f.send(allowedID, "Paella 14,50 €")
+	// The add-dish screen shows its own section only; home shows it all.
+	if got := f.tg.last(allowedID); strings.Contains(got, "Starters") {
+		t.Fatalf("add-dish screen names another section: %q", got)
+	}
+	f.press(allowedID, "⬅️ Back to menu")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "📂 Starters\n   • Gazpacho  6.50\n   • Croquetas  8.00\n\n📂 Rice dishes\n   • Paella  14.50") {
+		t.Fatalf("home = %q", got)
+	}
 
 	want := []string{"Starters/Gazpacho 6.50", "Starters/Croquetas 8.00", "Rice dishes/Paella 14.50"}
 	d := f.draftOf(allowedID)
@@ -100,7 +117,8 @@ func TestBuilderFirstMenu(t *testing.T) {
 	}
 
 	f.press(allowedID, "✅ Done, preview")
-	if got := f.tg.last(allowedID); !strings.Contains(got, "Your menu is valid") || !strings.Contains(got, "Items: 3") {
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Your menu is valid") ||
+		!strings.Contains(got, "📂 Rice dishes\n   • Paella  14.50") || strings.Contains(got, "Items:") {
 		t.Fatalf("preview = %q", got)
 	}
 	f.press(allowedID, "Publish")
@@ -131,7 +149,7 @@ func TestBuilderInput(t *testing.T) {
 			[]string{"• I could not find a price"}, nil},
 		{"the prompt stays open after a mistake", func(f *fixture) { f.send(allowedID, "Bread") }, "Bread 1",
 			[]string{"✅ Added 1 dish"}, []string{"Starters/Bread 1.00"}},
-		{"section name too long", func(f *fixture) { f.press(allowedID, "📂 Add section") }, strings.Repeat("a", 101),
+		{"section name too long", func(f *fixture) { f.press(allowedID, "⬅️ Back to menu"); f.press(allowedID, "📂 Add section") }, strings.Repeat("a", 101),
 			[]string{"name is too long", "Nothing was changed"}, nil},
 		{"description too long", func(f *fixture) {
 			f.send(allowedID, "Soup 4")
@@ -139,9 +157,10 @@ func TestBuilderInput(t *testing.T) {
 		}, strings.Repeat("a", 501), []string{"description is too long"}, []string{"Starters/Soup 4.00"}},
 		{"too large", nil, strings.Repeat("a", 1025), []string{"too large", "1 KB"}, nil},
 		{"a whole menu is still previewed", nil, validList, []string{"Your menu is valid"}, nil},
-		{"after Back, text is not for the builder", func(f *fixture) { f.press(allowedID, "📂 Add section"); f.press(allowedID, "⬅️ Back") },
+		{"after Back, text is not for the builder", func(f *fixture) { f.press(allowedID, "⬅️ Back to menu") },
 			"Soup 4.50", []string{"does not look like a menu"}, nil},
 		{"after Keep for later, text is not for the builder", func(f *fixture) {
+			f.press(allowedID, "⬅️ Back to menu")
 			f.press(allowedID, "Cancel")
 			f.press(allowedID, "💾 Keep for later")
 		}, "Soup 4.50", []string{"does not look like a menu"}, nil},
@@ -191,8 +210,9 @@ func TestBuilderStartsFromPublishedMenu(t *testing.T) {
 	if got := f.tg.last(allowedID); !strings.Contains(got, "the menu that is online now") || !strings.Contains(got, "• Soup  4.50") {
 		t.Fatalf("panel = %q", got)
 	}
-	f.press(allowedID, "➕ Add dish")
+	f.press(allowedID, "➕ Add dish") // one section: no question about which
 	f.send(allowedID, "Salad 7")
+	f.press(allowedID, "⬅️ Back to menu")
 	f.press(allowedID, "✅ Done, preview")
 	if got := f.tg.last(allowedID); !strings.Contains(got, "It replaces the menu that is online now") {
 		t.Fatalf("preview = %q", got)
@@ -242,9 +262,11 @@ func TestBuilderButtons(t *testing.T) {
 	oldID, old, _ := f.tg.button(allowedID, "Starters")
 	f.press(allowedID, "Starters")
 	f.send(allowedID, "Soup 4.50")
+	f.press(allowedID, "⬅️ Back to menu")
 	f.press(allowedID, "📂 Add section")
 	f.press(allowedID, "Drinks")
 	f.send(allowedID, "Water 2")
+	f.press(allowedID, "⬅️ Back to menu")
 
 	// A button from an older message redraws instead of acting.
 	f.pressData(allowedID, oldID, old.Data)
@@ -255,9 +277,17 @@ func TestBuilderButtons(t *testing.T) {
 		t.Fatalf("a stale button changed the draft: %d sections", got)
 	}
 
-	f.press(allowedID, "↔️ Change section")
-	f.press(allowedID, "Starters (1)")
+	// With two sections, Add dish asks which one first.
+	f.press(allowedID, "➕ Add dish")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Which section is it for?") {
+		t.Fatalf("after Add dish = %q", got)
+	}
+	f.press(allowedID, "📂 Starters")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "➕ Add a dish to Starters") || strings.Contains(got, "Drinks") {
+		t.Fatalf("add-dish screen = %q", got)
+	}
 	f.send(allowedID, "Bread 1")
+	f.press(allowedID, "⬅️ Back to menu")
 	if got, want := dishes(f.draftOf(allowedID)), []string{"Starters/Soup 4.50", "Starters/Bread 1.00", "Drinks/Water 2.00"}; !slices.Equal(got, want) {
 		t.Fatalf("draft = %q, want %q", got, want)
 	}
@@ -353,16 +383,18 @@ func editFixture(t *testing.T) *fixture {
 	f.send(allowedID, "/build")
 	f.press(allowedID, "Starters")
 	f.send(allowedID, "Soup 4.50\nBread 1")
+	f.press(allowedID, "⬅️ Back to menu")
 	f.press(allowedID, "📂 Add section")
 	f.press(allowedID, "Drinks")
 	f.send(allowedID, "Water 2")
+	f.press(allowedID, "⬅️ Back to menu")
 	return f
 }
 
 func TestBuilderEdit(t *testing.T) {
 	openSoup := func(f *fixture) {
-		f.press(allowedID, "✏️ Edit / remove")
-		f.press(allowedID, "Starters (2)")
+		f.press(allowedID, "✏️ Edit dishes")
+		f.press(allowedID, "📂 Starters")
 		f.press(allowedID, "Soup  4.50")
 	}
 	tests := []struct {
@@ -396,24 +428,24 @@ func TestBuilderEdit(t *testing.T) {
 		}, []string{"🗑 Removed Soup.", "📂 Starters (1 dish)"},
 			[]string{"Starters/Bread 1.00", "Drinks/Water 2.00"}},
 		{"rename section", func(f *fixture) {
-			f.press(allowedID, "✏️ Edit / remove")
-			f.press(allowedID, "Drinks (1)")
-			f.press(allowedID, "✏️ Rename section")
+			f.press(allowedID, "✏️ Edit sections")
+			f.press(allowedID, "📂 Drinks")
+			f.press(allowedID, "✏️ Rename")
 			f.send(allowedID, "Bebidas")
-		}, []string{"✅ The section is now called Bebidas."},
+		}, []string{"✅ The section is now called Bebidas.", "Your menu (draft)", "📂 Bebidas\n   • Water  2.00"},
 			[]string{"Starters/Soup 4.50", "Starters/Bread 1.00", "Bebidas/Water 2.00"}},
 		{"remove section asks first", func(f *fixture) {
-			f.press(allowedID, "✏️ Edit / remove")
-			f.press(allowedID, "Starters (2)")
-			f.press(allowedID, "🗑 Remove section")
+			f.press(allowedID, "✏️ Edit sections")
+			f.press(allowedID, "📂 Starters")
+			f.press(allowedID, "🗑 Remove")
 		}, []string{"Remove the section Starters and its 2 dishes"},
 			[]string{"Starters/Soup 4.50", "Starters/Bread 1.00", "Drinks/Water 2.00"}},
 		{"remove section", func(f *fixture) {
-			f.press(allowedID, "✏️ Edit / remove")
-			f.press(allowedID, "Starters (2)")
-			f.press(allowedID, "🗑 Remove section")
+			f.press(allowedID, "✏️ Edit sections")
+			f.press(allowedID, "📂 Starters")
+			f.press(allowedID, "🗑 Remove")
 			f.press(allowedID, "Yes, remove it")
-		}, []string{"🗑 Removed the section Starters.", "📂 Drinks (1)"}, []string{"Drinks/Water 2.00"}},
+		}, []string{"🗑 Removed the section Starters.", "📂 Drinks\n   • Water  2.00"}, []string{"Drinks/Water 2.00"}},
 		{"text while browsing is not a dish", func(f *fixture) {
 			openSoup(f)
 			f.send(allowedID, "Salad 7")
@@ -447,13 +479,13 @@ func TestBuilderEdit(t *testing.T) {
 func TestBuilderEditDescription(t *testing.T) {
 	f := editFixture(t)
 	open := func() {
-		f.press(allowedID, "✏️ Edit / remove")
-		f.press(allowedID, "Drinks (1)")
+		f.press(allowedID, "✏️ Edit dishes")
+		f.press(allowedID, "📂 Drinks")
 		f.press(allowedID, "Water  2.00")
 		f.press(allowedID, "📝 Description")
 	}
 	open()
-	if got := labels(f.tg.lastMsg(allowedID)); !slices.Equal(got, []string{"⬅️ Back"}) {
+	if got := labels(f.tg.lastMsg(allowedID)); !slices.Equal(got, []string{"⬅️ Back to menu"}) {
 		t.Fatalf("buttons without a description = %q", got)
 	}
 	f.send(allowedID, "Still, 50 cl")
@@ -480,9 +512,10 @@ func TestBuilderRemoveLastSectionAndPaging(t *testing.T) {
 		fmt.Fprintf(&b, "Dish %02d 1\n", i)
 	}
 	f.send(allowedID, b.String())
+	f.press(allowedID, "⬅️ Back to menu")
 
-	// One section: Edit / remove goes straight to its dishes.
-	f.press(allowedID, "✏️ Edit / remove")
+	// One section: Edit dishes goes straight to its dishes.
+	f.press(allowedID, "✏️ Edit dishes")
 	if got := f.tg.last(allowedID); !strings.Contains(got, "Page 1 of 3") {
 		t.Fatalf("list = %q", got)
 	}
@@ -497,14 +530,39 @@ func TestBuilderRemoveLastSectionAndPaging(t *testing.T) {
 		t.Errorf("back from a dish = %q", got)
 	}
 
-	f.press(allowedID, "🗑 Remove section")
+	f.press(allowedID, "⬅️ Back to menu")
+	f.press(allowedID, "✏️ Edit sections")
+	f.press(allowedID, "📂 Starters")
+	f.press(allowedID, "🗑 Remove")
 	f.press(allowedID, "Yes, remove it")
 	if got := f.tg.last(allowedID); !strings.Contains(got, "What is your first section called?") {
 		t.Errorf("after removing the only section = %q", got)
 	}
 	f.press(allowedID, "Mains")
+	f.press(allowedID, "⬅️ Back to menu")
 	f.press(allowedID, "✅ Done, preview")
-	if got := f.tg.last(allowedID); !strings.Contains(got, "Mains (0 items)") {
+	if got := f.tg.last(allowedID); !strings.Contains(got, "📂 Mains\n   No dishes yet.") {
 		t.Errorf("preview = %q", got)
+	}
+}
+
+func TestMenuTextStaysInOneMessage(t *testing.T) {
+	var m menu.Menu
+	p := 1.0
+	for c := range menu.MaxCategories {
+		items := make([]menu.Item, 60)
+		for i := range items {
+			items[i] = menu.Item{Name: fmt.Sprintf("A dish with a fairly long name %d-%d", c, i), Price: &p}
+		}
+		m.Categories = append(m.Categories, menu.Category{ID: fmt.Sprint("c", c), Name: fmt.Sprint("Section ", c), Items: items})
+	}
+	got := menuText(&m)
+	if len(got) > 3900 {
+		t.Errorf("menuText is %d bytes, too long for one message", len(got))
+	}
+	for _, want := range []string{"📂 Section 0\n   • A dish", "… and ", "📂 Section 49 (60 dishes)"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("menuText does not contain %q", want)
+		}
 	}
 }

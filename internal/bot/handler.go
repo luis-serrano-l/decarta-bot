@@ -54,9 +54,6 @@ const typingGrace = time.Second
 // maxIssuesShown is how many validation problems one reply lists.
 const maxIssuesShown = 5
 
-// maxCategoriesShown bounds the category list in a preview.
-const maxCategoriesShown = 12
-
 // qrScale is the number of image pixels per QR module. A menu link needs
 // about 40 modules a side, so the image is roughly 500 pixels wide: sharp
 // on a phone and large enough to print.
@@ -469,7 +466,7 @@ func (h *Handler) submit(ctx context.Context, u user, msg *tgbotapi.Message) {
 
 	nonce := h.setPending(u.id, actPublish, content)
 	h.log.Info("menu previewed", "id", u.id, "bytes", len(content), "categories", len(m.Categories))
-	h.reply(u, previewText(m.Summary(), h.store.Has(u.id)), []Button{
+	h.reply(u, previewText(m, h.store.Has(u.id)), []Button{
 		{Text: "Publish", Data: actPublish + ":" + nonce},
 		{Text: "Cancel", Data: actCancel + ":" + nonce},
 	})
@@ -840,32 +837,14 @@ func issuesText(e *menu.ValidationError) string {
 	return b.String()
 }
 
-// previewText summarises a valid menu: categories, item count and price
-// range.
-func previewText(s menu.Summary, replaces bool) string {
-	var b strings.Builder
-	b.WriteString("📋 Your menu is valid. Here is what I read:\n")
-	for i, c := range s.Categories {
-		if i == maxCategoriesShown {
-			fmt.Fprintf(&b, "\n… and %d more", len(s.Categories)-i)
-			break
-		}
-		fmt.Fprintf(&b, "\n• %s (%s)", c.Name, plural(c.Items, "item"))
-	}
-	fmt.Fprintf(&b, "\n\nCategories: %d\nItems: %d\n", len(s.Categories), s.Items)
-	switch {
-	case s.Items == 0:
-	case s.MinPrice == s.MaxPrice:
-		b.WriteString("Price: " + money(s.MinPrice) + "\n")
-	default:
-		b.WriteString("Prices: " + money(s.MinPrice) + " to " + money(s.MaxPrice) + "\n")
-	}
+// previewText shows a valid menu as it will be published: every section
+// with its dishes and prices.
+func previewText(m *menu.Menu, replaces bool) string {
+	text := "📋 Your menu is valid. This is what will be published:\n\n" + menuText(m) + "\n\nPublish it?"
 	if replaces {
-		b.WriteString("\nPublish it? It replaces the menu that is online now.")
-	} else {
-		b.WriteString("\nPublish it?")
+		text += " It replaces the menu that is online now."
 	}
-	return b.String()
+	return text
 }
 
 func money(p float64) string { return strconv.FormatFloat(p, 'f', 2, 64) }

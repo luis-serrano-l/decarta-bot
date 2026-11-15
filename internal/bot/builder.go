@@ -22,8 +22,8 @@ import (
 // DraftTTL is how long an untouched draft is kept.
 const DraftTTL = 7 * 24 * time.Hour
 
-// maxDishesShown bounds the dish list in the builder's menu message.
-const maxDishesShown = 25
+// maxDishesShown bounds the dish list on the screen where dishes are added.
+const maxDishesShown = 40
 
 // Builder callbacks. actBuildStart opens the builder; every button inside
 // it carries "b:<rev>:<verb>[:<n>...]", where rev is the draft's revision
@@ -221,42 +221,51 @@ func (h *Handler) show(u user, msgID int, d *draft, note string) {
 	h.edit(u, msgID, text, rows...)
 }
 
+// typeHint tells the owner how to answer: Telegram has no text fields, so
+// every answer is an ordinary message.
+const typeHint = "✍️ Write it in the message box below 👇 and send it"
+
+const backToMenu = "⬅️ Back to menu"
+
 // screen is the text and buttons for the draft's state.
 func (h *Handler) screen(d *draft) (string, [][]Button) {
+	back := [][]Button{{d.btn(backToMenu, "back")}}
 	switch d.Await {
 	case awaitSection:
 		return sectionPrompt(d)
+	case awaitDishes:
+		if d.current() != nil {
+			return addScreen(d)
+		}
 	case awaitDesc, awaitEditDesc:
 		if it := d.target(); it != nil {
-			rows := [][]Button{{d.btn("⬅️ Back", "back")}}
 			if d.Await == awaitEditDesc && it.Description != "" {
-				rows = append([][]Button{{d.btn("🗑 Remove the description", "idx", d.Target[0], d.Target[1])}}, rows...)
+				back = append([][]Button{{d.btn("🗑 Remove the description", "idx", d.Target[0], d.Target[1])}}, back...)
 			}
-			return fmt.Sprintf("📝 Send a short description for %s.\n\nFor example: Cold tomato soup with olive oil", it.Name), rows
+			return fmt.Sprintf("📝 A short description for %s\n\n%s, for example:\nCold tomato soup with olive oil", it.Name, typeHint), back
 		}
 	case awaitPrice:
 		if it := d.target(); it != nil {
-			return fmt.Sprintf("💶 %s costs %s now. Send the new price, for example 7.50", it.Name, priceText(*it)),
-				[][]Button{{d.btn("⬅️ Back", "back")}}
+			return fmt.Sprintf("💶 New price for %s (now %s)\n\n%s, for example:\n7.50", it.Name, priceText(*it), typeHint), back
 		}
 	case awaitName:
 		if it := d.target(); it != nil {
-			return fmt.Sprintf("✏️ Send the new name for %s.", it.Name), [][]Button{{d.btn("⬅️ Back", "back")}}
+			return fmt.Sprintf("✏️ New name for %s\n\n%s.", it.Name, typeHint), back
 		}
 	case awaitSecName:
 		if c := d.Target[0]; c >= 0 && c < len(d.Menu.Categories) {
-			return fmt.Sprintf("✏️ Send the new name for the section %s.", d.Menu.Categories[c].Name),
-				[][]Button{{d.btn("⬅️ Back", "back")}}
+			return fmt.Sprintf("✏️ New name for the section %s\n\n%s.", d.Menu.Categories[c].Name, typeHint), back
 		}
 	}
-	return panel(d)
+	return home(d)
 }
 
 func sectionPrompt(d *draft) (string, [][]Button) {
-	text := "📂 What is the new section called? Tap a name or type your own."
+	const how = "Tap a name, or ✍️ write your own in the message box below 👇 and send it."
+	text := "📂 New section\n\nWhat is it called?\n" + how
 	if len(d.Menu.Categories) == 0 {
 		text = "🍽 Let's build your menu.\n\nA menu is made of sections, such as Starters or Drinks, with dishes in them.\n\n" +
-			"📂 What is your first section called? Tap a name or type your own."
+			"📂 What is your first section called?\n" + how
 	}
 	var chips []Button
 	for i, name := range sectionChips {
@@ -273,54 +282,77 @@ func sectionPrompt(d *draft) (string, [][]Button) {
 		rows = append(rows, chips)
 	}
 	if len(d.Menu.Categories) > 0 {
-		rows = append(rows, []Button{d.btn("⬅️ Back", "back")})
+		rows = append(rows, []Button{d.btn(backToMenu, "back")})
 	} else {
 		rows = append(rows, []Button{d.btn("Cancel", "drop")})
 	}
 	return text, rows
 }
 
-// panel is the builder's main message: the menu so far and what can be
-// done next.
-func panel(d *draft) (string, [][]Button) {
+// home is the builder's main message: the whole menu so far and what can
+// be done with it.
+func home(d *draft) (string, [][]Button) {
+	return "🍽 Your menu (draft)\n\n" + menuText(&d.Menu) + "\n\nWhat next?", [][]Button{
+		{d.btn("➕ Add dish", "add"), d.btn("📂 Add section", "sec")},
+		{d.btn("✏️ Edit dishes", "ed"), d.btn("✏️ Edit sections", "eds")},
+		{d.btn("✅ Done, preview", "done"), d.btn("Cancel", "cancel")},
+	}
+}
+
+// addScreen is where dishes are typed: it shows the one section they go
+// to, and nothing else can be done here but go back.
+func addScreen(d *draft) (string, [][]Button) {
+	c := d.current()
 	var b strings.Builder
-	b.WriteString("🍽 Your menu (draft)\n")
-	cur := d.current()
-	for i := range d.Menu.Categories {
-		c := &d.Menu.Categories[i]
-		fmt.Fprintf(&b, "\n📂 %s (%d)", c.Name, len(c.Items))
-		if c != cur {
+	b.WriteString("📂 " + c.Name)
+	if len(c.Items) == 0 {
+		b.WriteString("\n   No dishes yet.")
+	}
+	first := max(0, len(c.Items)-maxDishesShown)
+	if first > 0 {
+		fmt.Fprintf(&b, "\n   … %s above", dishCount(first))
+	}
+	for _, it := range c.Items[first:] {
+		fmt.Fprintf(&b, "\n   • %s  %s", it.Name, priceText(it))
+	}
+	fmt.Fprintf(&b, "\n\n➕ Add a dish to %s\n%s, for example:\nGazpacho 6.50\n\nSeveral lines add several dishes.", c.Name, typeHint)
+
+	var rows [][]Button
+	if d.target() != nil && d.Target[0] == d.Current {
+		rows = append(rows, []Button{d.btn("📝 Describe last dish", "desc")})
+	}
+	return b.String(), append(rows, []Button{d.btn(backToMenu, "back")})
+}
+
+// menuTextBudget is the size, in bytes, after which menuText stops
+// listing dishes, to stay inside one Telegram message.
+const menuTextBudget = 2400
+
+// menuText lists every section with its dishes and prices.
+func menuText(m *menu.Menu) string {
+	var b strings.Builder
+	for i := range m.Categories {
+		c := &m.Categories[i]
+		if b.Len() > menuTextBudget {
+			fmt.Fprintf(&b, "\n📂 %s (%s)", c.Name, dishCount(len(c.Items)))
 			continue
 		}
+		if i > 0 {
+			b.WriteString("\n\n")
+		}
+		b.WriteString("📂 " + c.Name)
+		if len(c.Items) == 0 {
+			b.WriteString("\n   No dishes yet.")
+		}
 		for j, it := range c.Items {
-			if j == maxDishesShown {
+			if b.Len() > menuTextBudget {
 				fmt.Fprintf(&b, "\n   … and %d more", len(c.Items)-j)
 				break
 			}
 			fmt.Fprintf(&b, "\n   • %s  %s", it.Name, priceText(it))
 		}
 	}
-	b.WriteString("\n\n")
-	if d.Await == awaitDishes && cur != nil {
-		fmt.Fprintf(&b, "✏️ Adding to %s. Send a dish and its price, for example:\nGazpacho 6.50\n\n"+
-			"Several lines add several dishes.", cur.Name)
-	} else {
-		b.WriteString("What next?")
-	}
-
-	rows := [][]Button{{d.btn("📂 Add section", "sec")}}
-	if d.Await != awaitDishes {
-		rows[0] = append([]Button{d.btn("➕ Add dish", "add")}, rows[0]...)
-	} else if d.target() != nil && d.Target[0] == d.Current {
-		rows[0] = append([]Button{d.btn("📝 Describe last dish", "desc")}, rows[0]...)
-	}
-	second := []Button{d.btn("✏️ Edit / remove", "ed")}
-	if len(d.Menu.Categories) > 1 {
-		second = append(second, d.btn("↔️ Change section", "pick"))
-	}
-	rows = append(rows, second)
-	rows = append(rows, []Button{d.btn("✅ Done, preview", "done"), d.btn("Cancel", "cancel")})
-	return b.String(), rows
+	return b.String()
 }
 
 func priceText(it menu.Item) string {
@@ -377,11 +409,16 @@ func (h *Handler) builderInput(u user, text string) bool {
 		}
 	case awaitPrice, awaitName, awaitEditDesc, awaitSecName:
 		if note, err = d.applyEdit(text); err == nil {
-			// Back to the list the dish is in: changing several prices in
-			// a row is the common case.
+			renamedSection := d.Await == awaitSecName
 			d.Await = awaitNothing
-			if h.saveDraft(u, d) {
-				body, rows := sectionScreen(d, d.Target[0], max(0, d.Target[1])/dishesPerPage)
+			switch {
+			case !h.saveDraft(u, d):
+			case renamedSection:
+				h.show(u, 0, d, note)
+			default:
+				// Back to the list the dish is in: changing several prices
+				// in a row is the common case.
+				body, rows := sectionScreen(d, d.Target[0], d.Target[1]/dishesPerPage)
 				h.reply(u, note+"\n\n"+body, rows...)
 			}
 			return true
@@ -449,7 +486,7 @@ func label(s string) string {
 }
 
 // sectionScreen lists one page of the dishes of section c, each a button
-// that opens the dish, with the actions on the section itself.
+// that opens the dish.
 func sectionScreen(d *draft, c, page int) (string, [][]Button) {
 	cat := &d.Menu.Categories[c]
 	pages := max(1, (len(cat.Items)+dishesPerPage-1)/dishesPerPage)
@@ -479,9 +516,16 @@ func sectionScreen(d *draft, c, page int) (string, [][]Button) {
 	if len(nav) > 0 {
 		rows = append(rows, nav)
 	}
-	return text, append(rows,
-		[]Button{d.btn("✏️ Rename section", "rs", c), d.btn("🗑 Remove section", "xs", c)},
-		[]Button{d.btn("⬅️ Back to menu", "back")})
+	return text, append(rows, []Button{d.btn(backToMenu, "back")})
+}
+
+// sectionActions shows what can be done with section c itself.
+func sectionActions(d *draft, c int) (string, [][]Button) {
+	cat := d.Menu.Categories[c]
+	return fmt.Sprintf("📂 %s (%s)", cat.Name, dishCount(len(cat.Items))), [][]Button{
+		{d.btn("✏️ Rename", "rs", c), d.btn("🗑 Remove", "xs", c)},
+		{d.btn(backToMenu, "back")},
+	}
 }
 
 // itemScreen shows dish i of section c and what can be done with it.
@@ -589,18 +633,28 @@ func (h *Handler) builderPress(u user, msgID int, data string) {
 
 	note := ""
 	switch verb {
-	case "ed":
+	case "ed", "eds":
 		// Text typed while browsing must not be taken for new dishes.
 		d.Await = awaitNothing
 		if !h.saveDraft(u, d) {
 			return
 		}
-		if len(d.Menu.Categories) == 1 {
+		switch {
+		case verb == "eds":
+			h.edit(u, msgID, "✏️ Edit sections\n\nWhich section?", sectionRows(d, "sx")...)
+		case len(d.Menu.Categories) == 1:
 			text, rows := sectionScreen(d, 0, 0)
 			h.edit(u, msgID, text, rows...)
+		default:
+			h.edit(u, msgID, "✏️ Edit dishes\n\nWhich section is the dish in?", sectionRows(d, "es")...)
+		}
+		return
+	case "sx":
+		if !hasSection {
 			return
 		}
-		h.edit(u, msgID, "✏️ Which section do you want to change?", sectionRows(d, "es")...)
+		text, rows := sectionActions(d, c)
+		h.edit(u, msgID, text, rows...)
 		return
 	case "es":
 		if !hasSection {
@@ -651,7 +705,7 @@ func (h *Handler) builderPress(u user, msgID int, data string) {
 		}
 		cat := d.Menu.Categories[c]
 		h.edit(u, msgID, fmt.Sprintf("🗑 Remove the section %s and its %s from the draft?", cat.Name, dishCount(len(cat.Items))),
-			[]Button{d.btn("Yes, remove it", "xsy", c), d.btn("⬅️ Back", "es", c, 0)})
+			[]Button{d.btn("Yes, remove it", "xsy", c), d.btn("⬅️ Back", "sx", c)})
 		return
 	case "xsy":
 		if !hasSection {
@@ -665,7 +719,16 @@ func (h *Handler) builderPress(u user, msgID int, data string) {
 			d.Await = awaitSection
 		}
 	case "add":
-		d.Await = awaitDishes
+		switch len(d.Menu.Categories) {
+		case 0:
+			d.Await = awaitSection
+		case 1:
+			d.Current, d.Await = 0, awaitDishes
+			d.Target = [2]int{-1, -1}
+		default:
+			h.edit(u, msgID, "➕ Add dish\n\nWhich section is it for?", sectionRows(d, "cur")...)
+			return
+		}
 	case "sec":
 		d.Await = awaitSection
 	case "chip":
@@ -688,9 +751,6 @@ func (h *Handler) builderPress(u user, msgID int, data string) {
 			return
 		}
 		d.Await = awaitDesc
-	case "pick":
-		h.edit(u, msgID, "↔️ Which section do you want to add dishes to?", sectionRows(d, "cur")...)
-		return
 	case "cur":
 		n := arg(0)
 		if n < 0 || n >= len(d.Menu.Categories) {
@@ -732,9 +792,9 @@ func (h *Handler) builderPress(u user, msgID int, data string) {
 func sectionRows(d *draft, verb string) [][]Button {
 	rows := make([][]Button, 0, len(d.Menu.Categories)+1)
 	for i, c := range d.Menu.Categories {
-		rows = append(rows, []Button{d.btn(fmt.Sprintf("%s (%d)", c.Name, len(c.Items)), verb, i)})
+		rows = append(rows, []Button{d.btn("📂 "+label(c.Name), verb, i)})
 	}
-	return append(rows, []Button{d.btn("⬅️ Back", "back")})
+	return append(rows, []Button{d.btn(backToMenu, "back")})
 }
 
 // builderDone validates the draft and turns the builder message into the
@@ -768,7 +828,7 @@ func (h *Handler) builderDone(u user, msgID int, d *draft) {
 	}
 	nonce := h.setPending(u.id, actPublish, content)
 	h.log.Info("menu previewed", "id", u.id, "bytes", len(content), "categories", len(d.Menu.Categories))
-	h.edit(u, msgID, previewText(d.Menu.Summary(), h.store.Has(u.id)),
+	h.edit(u, msgID, previewText(&d.Menu, h.store.Has(u.id)),
 		[]Button{
 			{Text: "Publish", Data: actPublish + ":" + nonce},
 			{Text: "Cancel", Data: actCancel + ":" + nonce},
