@@ -95,9 +95,10 @@ docker compose up -d --force-recreate --wait
 ```
 
 **7. Publish.** Send `/template` to the bot. It sends you `menu.json`; send
-that file straight back (or edit it first). The bot replies with a summary
-and two buttons. Tap **Publish**, then **Open my menu**. The page is live
-about a minute later, once the site has rebuilt.
+that file straight back (or edit it first). The bot replies with the menu
+as it read it and two buttons. Tap **Publish**. About a minute later, once
+the site has rebuilt, the bot tells you the menu is online; tap **Open my
+menu**.
 
 Something not working? `docker compose logs bot` says why; see
 [Run with Docker](docs/how-to/run-with-docker.md#troubleshooting).
@@ -116,8 +117,9 @@ Something not working? `docker compose logs bot` says why; see
 
 | Command | What it does |
 |---|---|
-| `/start` | What the bot does, with **Get a template** and **How it works** buttons |
+| `/start` | What the bot does, with **Build my menu**, **Get a template** and **How it works** buttons |
 | `/help` | The commands available to you |
+| `/build` | Build or change your menu in the chat, with buttons |
 | `/template` | Sends an example `menu.json` to edit and send back |
 | `/link` | The link to your menu |
 | `/qr` | A QR code of the link, to print for your tables |
@@ -152,7 +154,7 @@ The [documentation](docs/README.md) follows [Diátaxis](https://diataxis.fr/):
 | | |
 |---|---|
 | **Tutorial** | [Publish your first menu](docs/tutorial/first-menu.md) |
-| **How-to guides** | [Run with Docker](docs/how-to/run-with-docker.md) · [Run as a snap](docs/how-to/run-as-snap.md) · [Create the BotFather token](docs/how-to/create-botfather-token.md) · [Create the fine-grained GitHub token](docs/how-to/create-github-token.md) · [Smoke-test a release](docs/how-to/smoke-test.md) · [Cut a release](docs/how-to/release.md) |
+| **How-to guides** | [Build a menu with buttons](docs/how-to/build-a-menu-with-buttons.md) · [Run with Docker](docs/how-to/run-with-docker.md) · [Run as a snap](docs/how-to/run-as-snap.md) · [Create the BotFather token](docs/how-to/create-botfather-token.md) · [Create the fine-grained GitHub token](docs/how-to/create-github-token.md) · [Smoke-test a release](docs/how-to/smoke-test.md) · [Cut a release](docs/how-to/release.md) |
 | **Reference** | [Environment variables](docs/reference/environment.md) · [Menu JSON schema](docs/reference/menu-schema.md) · [Commands](docs/reference/commands.md) |
 | **Explanation** | [Design](docs/explanation/design.md) · [Threat model](docs/explanation/threat-model.md) |
 

@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/luis-serrano-l/decarta-bot/internal/menuid"
 )
@@ -18,9 +20,14 @@ import (
 // ErrInvalidID is returned for ids that are not well-formed menu ids.
 var ErrInvalidID = errors.New("store: invalid menu id")
 
-// Store saves and looks up published menus.
+// ErrNotFound is returned by Load when nothing is stored for the id.
+var ErrNotFound = errors.New("store: not found")
+
+// Store saves and looks up one document per menu id.
 type Store interface {
 	Save(id string, content []byte) error
+	// Load returns the stored copy for id, or ErrNotFound.
+	Load(id string) ([]byte, error)
 	Has(id string) bool
 	// Delete removes the copy for id; it is not an error if there is none.
 	Delete(id string) error
@@ -73,6 +80,48 @@ func (f *File) Save(id string, content []byte) error {
 		return fmt.Errorf("store: rename: %w", err)
 	}
 	return nil
+}
+
+// Load returns the stored copy for id, or ErrNotFound if there is none.
+func (f *File) Load(id string) ([]byte, error) {
+	path, err := f.path(id)
+	if err != nil {
+		return nil, err
+	}
+	content, err := os.ReadFile(path) //nolint:gosec // path is built from a validated base62 id
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		return nil, ErrNotFound
+	case err != nil:
+		return nil, fmt.Errorf("store: read: %w", err)
+	}
+	return content, nil
+}
+
+// Prune removes every stored copy last written before the given time and
+// reports how many were removed. Files that are not stored copies are left
+// alone.
+func (f *File) Prune(before time.Time) (int, error) {
+	entries, err := os.ReadDir(f.dir)
+	if err != nil {
+		return 0, fmt.Errorf("store: list: %w", err)
+	}
+	removed := 0
+	for _, e := range entries {
+		id, isCopy := strings.CutSuffix(e.Name(), ".json")
+		if !isCopy || !e.Type().IsRegular() || !menuid.Valid(id) {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil || !info.ModTime().Before(before) {
+			continue
+		}
+		if err := f.Delete(id); err != nil {
+			return removed, err
+		}
+		removed++
+	}
+	return removed, nil
 }
 
 // Has reports whether a copy is stored for id.

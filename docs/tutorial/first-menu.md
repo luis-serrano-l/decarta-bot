@@ -120,22 +120,20 @@ Send `/status`. It now says `Access: administrator`.
 3. The bot replies with what it read:
 
    ```
-   📋 Your menu is valid. Here is what I read:
+   📋 Your menu is valid. This is what will be published:
 
-   • Starters (2 items)
-   • Main dishes (2 items)
-   • Desserts (1 item)
-
-   Categories: 3
-   Items: 5
-   Prices: 5.00 to 18.90
+   📂 Starters
+      • Soup of the day  5.00
+      …
 
    Publish it?
    ```
 
-4. Tap **Publish**. The message changes to `✅ Menu published!` with an
-   **Open my menu** button.
-5. Wait about a minute, then tap **Open my menu**.
+   Every section is listed with its dishes and prices.
+
+4. Tap **Publish**. The message changes to `⏳ Publishing your menu…`.
+5. About a minute later the bot sends `✅ Your menu is online!` with an
+   **Open my menu** button. Tap it.
 
 That is your menu, on the public web. In your fork, the **Actions** tab
 shows the build the bot triggered, and `static/menus/` contains the file
@@ -159,6 +157,15 @@ Instead of a preview you get the exact place and the fix:
 ```
 
 Nothing was published; the page still shows your last good menu.
+
+## 9. Change it without a file
+
+You do not need the file for small changes. Send `/build`: the bot shows
+the menu that is online, with buttons. Tap **Add dish**, choose the
+section, send `Tiramisu 6.50`, then tap **Back to menu**, **Done,
+preview** and **Publish**. **Edit dishes** changes a price or takes a dish
+off. The steps are in
+[Build a menu with buttons](../how-to/build-a-menu-with-buttons.md).
 
 ## Where to go next
 

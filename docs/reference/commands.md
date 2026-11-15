@@ -13,13 +13,14 @@ There are three roles:
 
 ## Commands
 
-The first seven are registered with Telegram (`setMyCommands`) each time the
+The first eight are registered with Telegram (`setMyCommands`) each time the
 bot starts, so they appear in the menu next to the message box.
 
 | Command | Who | What it does |
 |---|---|---|
-| `/start` | everyone | Explains the bot in three lines, with the buttons **Get a template** and **How it works**. Tells non-publishers how to ask for access. |
+| `/start` | everyone | Explains the bot in three lines, with the buttons **Build my menu**, **Get a template** and **How it works**. Tells non-publishers how to ask for access. |
 | `/help` | everyone | Lists the commands available to your role. |
+| `/build` | publishers | Opens the [menu builder](#building-a-menu-with-buttons): add and change sections and dishes with buttons. |
 | `/template` | publishers | Sends `menu.json`, an example menu that is valid as it is. Edit it and send it back. |
 | `/link` | publishers | Your menu's address, with an **Open my menu** button if a menu is published. Aliases: `/myurl`, `/menuurl`. |
 | `/qr` | publishers | A QR code of your menu's address as an image, to print or show on a screen. Needs a published menu; before that it only tells you the address. |
@@ -30,7 +31,8 @@ bot starts, so they appear in the menu next to the message box.
 
 ## Sending a menu
 
-Publishers send a menu in any of three ways:
+Publishers either [build the menu with buttons](#building-a-menu-with-buttons)
+or send a whole menu in any of three ways:
 
 - a `.json` file,
 - JSON pasted into a message,
@@ -41,19 +43,69 @@ downloads and checks the menu the chat shows "typing…".
 
 | The menu is | The bot replies with |
 |---|---|
-| valid | A summary (each category with its item count, totals, price range) and the buttons **Publish** and **Cancel** |
+| valid | The menu as it will be published (every section with its dishes and prices; a very long menu is cut short with counts) and the buttons **Publish** and **Cancel** |
 | invalid | Up to five problems, each with the field path, what is wrong and how to fix it, and the total if there are more |
 | larger than `MAX_UPLOAD_BYTES` | The size limit |
 | not a menu at all (ordinary chat) | A hint to use `/template` |
 
+## Building a menu with buttons
+
+`/build` opens a draft of your menu in the chat. It starts from the draft
+you were working on, or else from the menu you have online, or else empty.
+Nothing changes online until you tap **Done, preview** and then
+**Publish**.
+
+Telegram has no text fields inside a message, so every answer is an
+ordinary message; each question says "Write it in the message box below
+and send it" and carries a **Back to menu** button.
+
+The menu message lists every section with its dishes and prices.
+
+| Button on the menu message | Effect |
+|---|---|
+| **Add dish** | Asks which section the dish is for (skipped when there is only one), then shows that section alone, with its dishes, and waits. Send one dish per line, the name then the price: `Gazpacho 6.50`. Several lines add several dishes, and you can keep sending more. The only buttons there are **Describe last dish**, which asks for a description of the dish you just added, and **Back to menu**. |
+| **Add section** | Asks for the section's name; tap a suggestion (Starters, Mains, Desserts, Drinks) or type your own. You are then taken to add its dishes. |
+| **Edit dishes** | Choose a section, then a dish (eight per page): **Change price**, **Rename**, **Description**, **Remove**. After a change you are back at the list of dishes. |
+| **Edit sections** | Choose a section: **Rename** or **Remove** (asks first, and removes its dishes). |
+| **Done, preview** | Checks the menu and shows the usual preview with **Publish** and **Cancel**, plus **Keep editing** to go back. |
+| **Cancel** | **Keep for later** or **Discard draft**. Neither changes what is online. |
+
+What you type:
+
+- A price may use a dot or a comma and a currency sign: `6.50`, `6,50`,
+  `6.50 €`. Three digits after a mark are thousands: `12.000` is twelve
+  thousand.
+- Punctuation between the name and the price is dropped, so
+  `Flan: 4` and `Flan ..... 4` both work.
+- If a line is wrong the bot names the line and the fix, adds nothing from
+  that message, and keeps waiting for the answer.
+- A whole menu (a `.json` file, pasted JSON or the list format) sent while
+  the builder is waiting is treated as a menu and previewed, as always.
+- Editing a message you already sent does not change the draft.
+- Text sent when the builder is not waiting for an answer is handled as
+  before the builder existed.
+
+About the draft:
+
+- There is one draft per user. It is saved after every change and
+  survives a restart of the bot.
+- It is kept for 7 days after the last change.
+- Publishing a menu, by any route, and `/delete` remove it; the next
+  `/build` starts from what is online.
+- A button under an older builder message does nothing except show the
+  menu as it is now.
+
 ## Buttons
+
+The builder's own buttons are listed [above](#building-a-menu-with-buttons).
 
 | Button | Appears under | Effect |
 |---|---|---|
+| **Build my menu** | `/start` | Same as `/build` |
 | **Get a template** | `/start` | Same as `/template` |
 | **How it works** | `/start` | The steps from template to published page, and the list format |
-| **Publish** | A preview | Publishes the previewed menu. The message becomes "Menu published" with the link, a note that the page updates in about a minute, and the buttons **Open my menu** and **Get QR code**. |
-| **Cancel** | A preview or a delete question | Discards it. Nothing changes. |
+| **Publish** | A preview | Publishes the previewed menu. The message becomes "Publishing your menu…" with the link and a note that it takes about a minute. The bot then looks at the site every 10 seconds and, when the page really shows the new menu, sends "Your menu is online!" with the buttons **Open my menu** and **Get QR code**. If that has not happened after 5 minutes it says the page is taking longer than usual. Unpublishing or publishing again in the meantime cancels the message about the older menu. |
+| **Cancel** | A preview or a delete question | Discards it. Nothing changes. A draft in the builder is kept. |
 | **Yes, delete it** | `/delete` | Removes the menu from the site. The page disappears in about a minute. |
 | **Open my menu** | A published message, `/link`, `/status` | Opens the public page |
 | **Get QR code** | A published message | Same as `/qr` |
@@ -75,7 +127,8 @@ previews, rejected menus, cancels and deletes do not, and neither does a
 publish that fails.
 
 Uploads have their own, looser limit: 20 menus checked per user per 10
-minutes, valid or not. It is not configurable. Past it the bot says when
+minutes, valid or not. **Done, preview** in the builder counts as one;
+adding and changing dishes does not. It is not configurable. Past it the bot says when
 you can send another; a preview already on screen can still be published.
 
 At the publish limit the bot says how long to wait ("You can publish again in 12

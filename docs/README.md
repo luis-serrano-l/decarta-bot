@@ -10,6 +10,8 @@ matches what you need right now.
 
 ## How-to guides: get a task done
 
+- [Build a menu with buttons](how-to/build-a-menu-with-buttons.md): add
+  sections and dishes in the chat, and change prices, without a file.
 - [Run with Docker](how-to/run-with-docker.md): start, update, back up and
   troubleshoot the bot.
 - [Run as a snap](how-to/run-as-snap.md): install, configure and update

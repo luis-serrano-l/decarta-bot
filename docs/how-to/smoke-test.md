@@ -41,7 +41,7 @@ Send each message to the bot in a private chat.
 | 4 | `/template` | A `menu.json` file |
 | 5 | Send that `menu.json` back unchanged | A summary with **Publish** and **Cancel** |
 | 6 | Tap **Cancel** | Discarded; no new commit on the scratch branch |
-| 7 | Send `menu.json` again and tap **Publish** | "Menu published" with a link, **Open my menu** and **Get QR code** |
+| 7 | Send `menu.json` again and tap **Publish** | "Publishing your menu…" with a link; about a minute later "Your menu is online!" with **Open my menu** and **Get QR code** (on a scratch branch that Pages does not deploy: "taking longer than usual" after 5 minutes) |
 | 8 | Open the scratch branch on GitHub | A commit `menu: update <id>` adding `static/menus/<id>.json` |
 | 9 | Tap **Publish** on the same message again | "This button has expired or was already used" |
 | 10 | Send the text `hello` | A hint to use `/template` |

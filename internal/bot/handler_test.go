@@ -22,6 +22,7 @@ import (
 	"github.com/luis-serrano-l/decarta-bot/internal/menuid"
 	"github.com/luis-serrano-l/decarta-bot/internal/publisher"
 	"github.com/luis-serrano-l/decarta-bot/internal/ratelimit"
+	"github.com/luis-serrano-l/decarta-bot/internal/store"
 )
 
 const (
@@ -228,6 +229,16 @@ func (s *memStore) Save(id string, content []byte) error {
 	return nil
 }
 
+func (s *memStore) Load(id string) ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	content, ok := s.saved[id]
+	if !ok {
+		return nil, store.ErrNotFound
+	}
+	return content, nil
+}
+
 func (s *memStore) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -243,15 +254,17 @@ func (s *memStore) Has(id string) bool {
 }
 
 type fixture struct {
-	t    *testing.T
-	h    *Handler
-	tg   *fakeMessenger
-	pub  *publisher.Fake
-	st   *memStore
-	ids  *menuid.Generator
-	logs *bytes.Buffer
-	now  time.Time
-	cbs  int
+	t   *testing.T
+	h   *Handler
+	tg  *fakeMessenger
+	pub *publisher.Fake
+	st  *memStore
+	// drafts holds the menus being built with /build.
+	drafts *memStore
+	ids    *menuid.Generator
+	logs   *bytes.Buffer
+	now    time.Time
+	cbs    int
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -261,13 +274,14 @@ func newFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	f := &fixture{
-		t:    t,
-		tg:   &fakeMessenger{files: map[string][]byte{}},
-		pub:  &publisher.Fake{},
-		st:   &memStore{},
-		ids:  ids,
-		logs: &bytes.Buffer{},
-		now:  time.Unix(1_700_000_000, 0),
+		t:      t,
+		tg:     &fakeMessenger{files: map[string][]byte{}},
+		pub:    &publisher.Fake{},
+		st:     &memStore{},
+		drafts: &memStore{},
+		ids:    ids,
+		logs:   &bytes.Buffer{},
+		now:    time.Unix(1_700_000_000, 0),
 	}
 	clock := func() time.Time { return f.now }
 	f.h = NewHandler(
@@ -277,7 +291,7 @@ func newFixture(t *testing.T) *fixture {
 			AdminUserIDs:   []int64{adminID},
 			MaxUploadBytes: 1024,
 		},
-		ids, f.pub, f.st,
+		ids, f.pub, f.st, f.drafts,
 		ratelimit.New(2, time.Hour, clock),
 		ratelimit.New(testUploadLimit, 10*time.Minute, clock),
 		ratelimit.New(1, time.Hour, clock),
@@ -285,6 +299,9 @@ func newFixture(t *testing.T) *fixture {
 		slog.New(slog.NewTextHandler(f.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
 	)
 	f.h.now = clock
+	// Watching the site after a publish is off unless a test sets
+	// f.h.opts.Site; then it must not take real seconds.
+	f.h.liveWait, f.h.liveEvery, f.h.liveFor = time.Millisecond, time.Millisecond, 50*time.Millisecond
 	return f
 }
 
@@ -540,13 +557,15 @@ func TestSubmitAndConfirm(t *testing.T) {
 	}
 }
 
-func TestPreviewSummarisesTheMenu(t *testing.T) {
+func TestPreviewListsTheMenu(t *testing.T) {
 	f := newFixture(t)
 	f.send(allowedID, "CATEGORY: Starters\n- ITEM: Soup\n  PRICE: 4.5\n- ITEM: Bread\n  PRICE: 2\nCATEGORY: Mains\n- ITEM: Fish\n  PRICE: 18.9\nCATEGORY: Drinks")
 	got := f.tg.last(allowedID)
 	for _, want := range []string{
-		"• Starters (2 items)", "• Mains (1 item)", "• Drinks (0 items)",
-		"Categories: 3", "Items: 3", "Prices: 2.00 to 18.90", "Publish it?",
+		"📂 Starters\n   • Soup  4.50\n   • Bread  2.00",
+		"📂 Mains\n   • Fish  18.90",
+		"📂 Drinks\n   No dishes yet.",
+		"Publish it?",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("preview does not contain %q:\n%s", want, got)
@@ -559,12 +578,11 @@ func TestPreviewSummarisesTheMenu(t *testing.T) {
 		t.Error("no typing indicator was shown while the menu was checked")
 	}
 
-	// A single price is not shown as a range; a second menu warns that it
-	// replaces the first.
+	// A second menu warns that it replaces the first.
 	f.press(allowedID, "Publish")
 	f.send(allowedID, validList)
 	got = f.tg.last(allowedID)
-	if !strings.Contains(got, "Price: 4.50") || !strings.Contains(got, "replaces the menu that is online now") {
+	if !strings.Contains(got, "• Soup  4.50") || !strings.Contains(got, "replaces the menu that is online now") {
 		t.Errorf("second preview:\n%s", got)
 	}
 }
@@ -999,7 +1017,7 @@ func TestStart(t *testing.T) {
 	if n := strings.Count(m.text, "\n") + 1; n != 3 {
 		t.Errorf("/start is %d lines, want 3:\n%s", n, m.text)
 	}
-	if got := labels(m); !slices.Equal(got, []string{"Get a template", "How it works"}) {
+	if got := labels(m); !slices.Equal(got, []string{"🍽 Build my menu", "Get a template", "How it works"}) {
 		t.Errorf("buttons = %q", got)
 	}
 
@@ -1189,7 +1207,7 @@ func TestCommands(t *testing.T) {
 // Every command in the registered menu must be handled, and described
 // within Telegram's limits.
 func TestRegisteredCommandsAreHandled(t *testing.T) {
-	want := []string{"start", "help", "template", "link", "qr", "status", "delete"}
+	want := []string{"start", "help", "build", "template", "link", "qr", "status", "delete"}
 	var got []string
 	for _, c := range Commands {
 		got = append(got, c.Name)

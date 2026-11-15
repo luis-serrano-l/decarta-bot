@@ -54,9 +54,6 @@ const typingGrace = time.Second
 // maxIssuesShown is how many validation problems one reply lists.
 const maxIssuesShown = 5
 
-// maxCategoriesShown bounds the category list in a preview.
-const maxCategoriesShown = 12
-
 // qrScale is the number of image pixels per QR module. A menu link needs
 // about 40 modules a side, so the image is roughly 500 pixels wide: sharp
 // on a phone and large enough to print.
@@ -85,6 +82,7 @@ type Command struct {
 var Commands = []Command{
 	{"start", "What this bot does"},
 	{"help", "Commands and how to publish"},
+	{"build", "Build or change your menu with buttons"},
 	{"template", "Get an example menu.json to edit"},
 	{"link", "Get the link to your menu"},
 	{"qr", "Get a QR code for your menu"},
@@ -131,6 +129,9 @@ type Options struct {
 	AllowedUserIDs []int64 // may publish
 	AdminUserIDs   []int64 // may publish, receive access requests
 	MaxUploadBytes int64   // cap on a submitted menu, text or file
+	// Site, if set, is watched after a publish so that the user can be
+	// told when their menu is online.
+	Site SiteChecker
 }
 
 // Handler processes Telegram updates.
@@ -138,7 +139,8 @@ type Handler struct {
 	opts         Options
 	ids          *menuid.Generator
 	pub          publisher.Publisher
-	store        store.Store
+	store        store.Store // last published copy per user
+	drafts       store.Store // menu being built per user, see builder.go
 	publishLimit *ratelimit.Limiter
 	uploadLimit  *ratelimit.Limiter
 	requestLimit *ratelimit.Limiter
@@ -149,6 +151,13 @@ type Handler struct {
 	mu      sync.Mutex
 	pending map[string]*pending // by menu id; at most one per user
 	busy    map[string]struct{} // menu ids with a publish or delete in flight
+	// draftLocks holds one lock per menu id that has used the builder.
+	draftLocks map[string]*sync.Mutex
+	// watchGen counts publishes and deletes per menu id; see watchLive.
+	watchGen map[string]int
+	watches  sync.WaitGroup
+
+	liveWait, liveEvery, liveFor time.Duration
 }
 
 // pending is an action waiting for its confirmation button. It lives in
@@ -161,19 +170,24 @@ type pending struct {
 	expires time.Time
 }
 
-// NewHandler wires a Handler. publishLimit bounds publishes per user,
+// NewHandler wires a Handler. st keeps published menus and drafts keeps the
+// menus being built; they must not share a directory. publishLimit bounds publishes per user,
 // uploadLimit bounds the (cheaper, more frequent) menu submissions that
 // are checked and previewed, and requestLimit bounds /request_access
 // notifications.
-func NewHandler(opts Options, ids *menuid.Generator, pub publisher.Publisher, st store.Store,
+func NewHandler(opts Options, ids *menuid.Generator, pub publisher.Publisher, st, drafts store.Store,
 	publishLimit, uploadLimit, requestLimit *ratelimit.Limiter, tg Messenger, log *slog.Logger) *Handler {
 	return &Handler{
-		opts: opts, ids: ids, pub: pub, store: st,
+		opts: opts, ids: ids, pub: pub, store: st, drafts: drafts,
 		publishLimit: publishLimit, uploadLimit: uploadLimit, requestLimit: requestLimit,
 		tg: tg, log: log,
 		now:     time.Now,
 		pending: make(map[string]*pending),
 		busy:    make(map[string]struct{}),
+
+		draftLocks: make(map[string]*sync.Mutex),
+		watchGen:   make(map[string]int),
+		liveWait:   liveFirstCheck, liveEvery: liveInterval, liveFor: liveTimeout,
 	}
 }
 
@@ -198,6 +212,11 @@ func (h *Handler) Handle(ctx context.Context, update tgbotapi.Update) {
 	case msg.IsCommand():
 		h.command(u, msg)
 	case msg.Document != nil || msg.Text != "":
+		// A short answer to the builder's question, unless it is a whole
+		// menu. Edits are left out: they would add the same dishes twice.
+		if update.Message != nil && msg.Document == nil && !looksLikeMenu(msg.Text) && h.builderInput(u, msg.Text) {
+			return
+		}
 		h.submit(ctx, u, msg)
 	default:
 		h.reply(u, "📄 Send your menu as a .json file or as a text message.\n\nUse /template for an example and /help for all commands.")
@@ -227,10 +246,12 @@ func (h *Handler) command(u user, msg *tgbotapi.Message) {
 		if !u.publisher {
 			text += "\n\n🔒 You cannot publish yet. Use /request_access to ask the administrators."
 		}
-		h.reply(u, text, []Button{
-			{Text: "Get a template", Data: actTemplate},
-			{Text: "How it works", Data: actHow},
-		})
+		h.reply(u, text,
+			[]Button{{Text: "🍽 Build my menu", Data: actBuildStart}},
+			[]Button{
+				{Text: "Get a template", Data: actTemplate},
+				{Text: "How it works", Data: actHow},
+			})
 	case "help":
 		h.reply(u, helpText(u))
 	case "status":
@@ -239,6 +260,8 @@ func (h *Handler) command(u user, msg *tgbotapi.Message) {
 		// Anyone may ask for their own ID: it is what a new operator puts
 		// in ADMIN_USER_IDS, and what a user gives an administrator.
 		h.reply(u, fmt.Sprintf("🆔 Your Telegram user ID is %d", u.rawID))
+	case "build":
+		h.build(u)
 	case "template":
 		h.template(u)
 	case "link", "myurl", "menuurl":
@@ -453,7 +476,7 @@ func (h *Handler) submit(ctx context.Context, u user, msg *tgbotapi.Message) {
 
 	nonce := h.setPending(u.id, actPublish, content)
 	h.log.Info("menu previewed", "id", u.id, "bytes", len(content), "categories", len(m.Categories))
-	h.reply(u, previewText(m.Summary(), h.store.Has(u.id)), []Button{
+	h.reply(u, previewText(m, h.store.Has(u.id)), []Button{
 		{Text: "Publish", Data: actPublish + ":" + nonce},
 		{Text: "Cancel", Data: actCancel + ":" + nonce},
 	})
@@ -527,6 +550,10 @@ func (h *Handler) callback(ctx context.Context, cq *tgbotapi.CallbackQuery) {
 		h.reply(u, howText)
 	case actQR:
 		h.qr(u)
+	case actBuildStart:
+		h.build(u)
+	case actBuild:
+		h.builderPress(u, msgID, nonce)
 	case actPublish, actDelete, actCancel:
 		// One confirmed action per user at a time. Updates are handled
 		// concurrently, so without this a second tap during a slow publish
@@ -623,8 +650,16 @@ func (h *Handler) confirmPublish(ctx context.Context, u user, msgID int, nonce s
 		h.log.Warn("could not save the local copy", "id", u.id, "err", err)
 	}
 
+	h.dropDraft(u) // it is online now; /build starts from the published copy
+
 	h.log.Info("menu published", "id", u.id, "bytes", len(p.content))
 	url := h.menuURL(u.id)
+	if h.opts.Site != nil {
+		h.edit(u, msgID, "⏳ Publishing your menu…\n\nThis takes about a minute. "+
+			"I will send you a message here as soon as it is online.\n\n🔗 "+url)
+		h.watchLive(u, p.content)
+		return
+	}
 	h.edit(u, msgID, "✅ Menu published!\n\n🔗 "+url+
 		"\n\nThe page updates in about a minute. Use /link anytime to get this link again, or /qr for a QR code.",
 		openButton(url), []Button{{Text: "Get QR code", Data: actQR}})
@@ -658,7 +693,9 @@ func (h *Handler) confirmDelete(ctx context.Context, u user, msgID int, nonce st
 	if serr := h.store.Delete(u.id); serr != nil {
 		h.log.Warn("could not remove the local copy", "id", u.id, "err", serr)
 	}
-	if err != nil { // ErrNotFound
+	h.dropDraft(u)
+	h.supersede(u.id) // a publish still being watched must not report "online"
+	if err != nil {   // ErrNotFound
 		h.edit(u, msgID, "ℹ️ There was no published menu to delete.")
 		return
 	}
@@ -817,32 +854,14 @@ func issuesText(e *menu.ValidationError) string {
 	return b.String()
 }
 
-// previewText summarises a valid menu: categories, item count and price
-// range.
-func previewText(s menu.Summary, replaces bool) string {
-	var b strings.Builder
-	b.WriteString("📋 Your menu is valid. Here is what I read:\n")
-	for i, c := range s.Categories {
-		if i == maxCategoriesShown {
-			fmt.Fprintf(&b, "\n… and %d more", len(s.Categories)-i)
-			break
-		}
-		fmt.Fprintf(&b, "\n• %s (%s)", c.Name, plural(c.Items, "item"))
-	}
-	fmt.Fprintf(&b, "\n\nCategories: %d\nItems: %d\n", len(s.Categories), s.Items)
-	switch {
-	case s.Items == 0:
-	case s.MinPrice == s.MaxPrice:
-		b.WriteString("Price: " + money(s.MinPrice) + "\n")
-	default:
-		b.WriteString("Prices: " + money(s.MinPrice) + " to " + money(s.MaxPrice) + "\n")
-	}
+// previewText shows a valid menu as it will be published: every section
+// with its dishes and prices.
+func previewText(m *menu.Menu, replaces bool) string {
+	text := "📋 Your menu is valid. This is what will be published:\n\n" + menuText(m) + "\n\nPublish it?"
 	if replaces {
-		b.WriteString("\nPublish it? It replaces the menu that is online now.")
-	} else {
-		b.WriteString("\nPublish it?")
+		text += " It replaces the menu that is online now."
 	}
-	return b.String()
+	return text
 }
 
 func money(p float64) string { return strconv.FormatFloat(p, 'f', 2, 64) }
@@ -855,18 +874,18 @@ func plural(n int, word string) string {
 }
 
 const startText = "👋 I turn your restaurant menu into a web page.\n" +
-	"📄 Send me the menu as a file or as text and I show you a preview.\n" +
+	"🍽 Build it here with buttons, or send it as a file or as text, and I show you a preview.\n" +
 	"✅ Tap Publish and you get a link to share with your customers."
 
 const howText = `💡 How it works
 
-1. Get the example with /template and edit it, or write your own.
-2. Send it here, as a .json file or pasted as text.
+1. Build your menu with /build: add sections and dishes with buttons. Or get the example with /template and edit it.
+2. Tap Done in the builder, or send your file here, as a .json file or pasted as text.
 3. I check it. If something is wrong I name the field and how to fix it.
 4. You get a summary. Nothing is public until you tap Publish.
 5. The page is online in about a minute. /link gives you the address and /qr a QR code for your tables.
 
-To change the menu, send a new one. To take it down, use /delete.
+To change the menu, use /build or send a new one. To take it down, use /delete.
 
 No JSON editor at hand? Plain text works too:
 
@@ -881,13 +900,14 @@ func helpText(u user) string {
 	b.WriteString("/start - What this bot does\n")
 	b.WriteString("/help - Show this message\n")
 	if u.publisher {
+		b.WriteString("/build - Build or change your menu with buttons\n")
 		b.WriteString("/template - Get an example menu.json to edit\n")
 		b.WriteString("/link - Get the link to your menu\n")
 		b.WriteString("/qr - Get a QR code for your menu\n")
 		b.WriteString("/status - See what is published\n")
 		b.WriteString("/delete - Unpublish your menu\n")
 		b.WriteString("/myid - Show your Telegram user ID\n")
-		b.WriteString("\n📄 To publish, send your menu as a .json file or pasted as text. " +
+		b.WriteString("\n📄 To publish, use /build, or send your menu as a .json file or pasted as text. " +
 			"You get a preview first; nothing goes online until you tap Publish.")
 	} else {
 		b.WriteString("/status - See your access\n")
