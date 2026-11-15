@@ -28,11 +28,11 @@ padding:12px;overflow:hidden;font:14px/1.38 system-ui,-apple-system,"Segoe UI",R
 <g><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"></div></foreignObject></g>
 <g class="f" style="animation-name:f1"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div></div></foreignObject></g>
 <g class="f" style="animation-name:f2"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
-📄 Send me the menu as a file or as text and I show you a preview.
-✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div></div></foreignObject></g>
+🍽 Build it here with buttons, or send it as a file or as text, and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">🍽 Build my menu</div></div><div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div></div></foreignObject></g>
 <g class="f" style="animation-name:f3"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
-📄 Send me the menu as a file or as text and I show you a preview.
-✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+🍽 Build it here with buttons, or send it as a file or as text, and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">🍽 Build my menu</div></div><div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
 - ITEM: Bruschetta
   PRICE: 6.50
   DESCRIPTION: Tomato, basil, olive oil
@@ -49,8 +49,8 @@ CATEGORY: Dolci
 - ITEM: Tiramisù
   PRICE: 6.00</div></div></foreignObject></g>
 <g class="f" style="animation-name:f4"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
-📄 Send me the menu as a file or as text and I show you a preview.
-✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+🍽 Build it here with buttons, or send it as a file or as text, and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">🍽 Build my menu</div></div><div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
 - ITEM: Bruschetta
   PRICE: 6.50
   DESCRIPTION: Tomato, basil, olive oil
@@ -77,8 +77,8 @@ Prices: 6.00 to 12.50
 
 Publish it?<div class="r"><div class="k">Publish</div><div class="k">Cancel</div></div></div></div></foreignObject></g>
 <g class="f" style="animation-name:f5"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
-📄 Send me the menu as a file or as text and I show you a preview.
-✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+🍽 Build it here with buttons, or send it as a file or as text, and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">🍽 Build my menu</div></div><div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
 - ITEM: Bruschetta
   PRICE: 6.50
   DESCRIPTION: Tomato, basil, olive oil
@@ -105,8 +105,8 @@ Prices: 6.00 to 12.50
 
 Publish it?<div class="r"><div class="k p">Publish</div><div class="k">Cancel</div></div></div></div></foreignObject></g>
 <g class="f" style="animation-name:f6"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
-📄 Send me the menu as a file or as text and I show you a preview.
-✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+🍽 Build it here with buttons, or send it as a file or as text, and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">🍽 Build my menu</div></div><div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
 - ITEM: Bruschetta
   PRICE: 6.50
   DESCRIPTION: Tomato, basil, olive oil
@@ -127,8 +127,8 @@ CATEGORY: Dolci
 
 The page updates in about a minute. Use /link anytime to get this link again, or /qr for a QR code.<div class="r"><div class="k">Open my menu</div></div><div class="r"><div class="k">Get QR code</div></div></div></div></foreignObject></g>
 <g class="f" style="animation-name:f7"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
-📄 Send me the menu as a file or as text and I show you a preview.
-✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+🍽 Build it here with buttons, or send it as a file or as text, and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">🍽 Build my menu</div></div><div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
 - ITEM: Bruschetta
   PRICE: 6.50
   DESCRIPTION: Tomato, basil, olive oil
@@ -149,8 +149,8 @@ CATEGORY: Dolci
 
 The page updates in about a minute. Use /link anytime to get this link again, or /qr for a QR code.<div class="r"><div class="k">Open my menu</div></div><div class="r"><div class="k p">Get QR code</div></div></div></div></foreignObject></g>
 <g class="f" style="animation-name:f8"><rect width="400" height="760" fill="#fffaf4"/><foreignObject x="0" y="60" width="400" height="700"><div xmlns="http://www.w3.org/1999/xhtml" class="chat"><div class="m u">/start</div><div class="m b">👋 I turn your restaurant menu into a web page.
-📄 Send me the menu as a file or as text and I show you a preview.
-✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
+🍽 Build it here with buttons, or send it as a file or as text, and I show you a preview.
+✅ Tap Publish and you get a link to share with your customers.<div class="r"><div class="k">🍽 Build my menu</div></div><div class="r"><div class="k">Get a template</div><div class="k">How it works</div></div></div><div class="m u">CATEGORY: Antipasti
 - ITEM: Bruschetta
   PRICE: 6.50
   DESCRIPTION: Tomato, basil, olive oil

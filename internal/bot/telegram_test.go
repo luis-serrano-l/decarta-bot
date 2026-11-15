@@ -271,7 +271,7 @@ func TestEndToEnd(t *testing.T) {
 	client.backoff = time.Millisecond
 	handler := NewHandler(
 		Options{SiteBaseURL: siteURL, AllowedUserIDs: []int64{allowedID, templateUserID}, AdminUserIDs: []int64{adminID}, MaxUploadBytes: 1024},
-		ids, pub, &memStore{},
+		ids, pub, &memStore{}, &memStore{},
 		ratelimit.New(5, time.Hour, nil), ratelimit.New(20, time.Minute, nil), ratelimit.New(1, time.Hour, nil),
 		client, logger,
 	)
@@ -326,7 +326,7 @@ func TestEndToEnd(t *testing.T) {
 	if got := strings.Join(tg.sent[strangerID], "\n"); !strings.Contains(got, "not authorised") {
 		t.Errorf("stranger replies = %q", got)
 	}
-	if want := []string{"start", "help", "template", "link", "qr", "status", "delete"}; !slices.Equal(tg.commands, want) {
+	if want := []string{"start", "help", "build", "template", "link", "qr", "status", "delete"}; !slices.Equal(tg.commands, want) {
 		t.Errorf("registered commands = %q, want %q", tg.commands, want)
 	}
 	// Over the wire: /start carries its two callback buttons, the final

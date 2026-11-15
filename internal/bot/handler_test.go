@@ -254,15 +254,17 @@ func (s *memStore) Has(id string) bool {
 }
 
 type fixture struct {
-	t    *testing.T
-	h    *Handler
-	tg   *fakeMessenger
-	pub  *publisher.Fake
-	st   *memStore
-	ids  *menuid.Generator
-	logs *bytes.Buffer
-	now  time.Time
-	cbs  int
+	t   *testing.T
+	h   *Handler
+	tg  *fakeMessenger
+	pub *publisher.Fake
+	st  *memStore
+	// drafts holds the menus being built with /build.
+	drafts *memStore
+	ids    *menuid.Generator
+	logs   *bytes.Buffer
+	now    time.Time
+	cbs    int
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -272,13 +274,14 @@ func newFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	f := &fixture{
-		t:    t,
-		tg:   &fakeMessenger{files: map[string][]byte{}},
-		pub:  &publisher.Fake{},
-		st:   &memStore{},
-		ids:  ids,
-		logs: &bytes.Buffer{},
-		now:  time.Unix(1_700_000_000, 0),
+		t:      t,
+		tg:     &fakeMessenger{files: map[string][]byte{}},
+		pub:    &publisher.Fake{},
+		st:     &memStore{},
+		drafts: &memStore{},
+		ids:    ids,
+		logs:   &bytes.Buffer{},
+		now:    time.Unix(1_700_000_000, 0),
 	}
 	clock := func() time.Time { return f.now }
 	f.h = NewHandler(
@@ -288,7 +291,7 @@ func newFixture(t *testing.T) *fixture {
 			AdminUserIDs:   []int64{adminID},
 			MaxUploadBytes: 1024,
 		},
-		ids, f.pub, f.st,
+		ids, f.pub, f.st, f.drafts,
 		ratelimit.New(2, time.Hour, clock),
 		ratelimit.New(testUploadLimit, 10*time.Minute, clock),
 		ratelimit.New(1, time.Hour, clock),
@@ -1010,7 +1013,7 @@ func TestStart(t *testing.T) {
 	if n := strings.Count(m.text, "\n") + 1; n != 3 {
 		t.Errorf("/start is %d lines, want 3:\n%s", n, m.text)
 	}
-	if got := labels(m); !slices.Equal(got, []string{"Get a template", "How it works"}) {
+	if got := labels(m); !slices.Equal(got, []string{"🍽 Build my menu", "Get a template", "How it works"}) {
 		t.Errorf("buttons = %q", got)
 	}
 
@@ -1200,7 +1203,7 @@ func TestCommands(t *testing.T) {
 // Every command in the registered menu must be handled, and described
 // within Telegram's limits.
 func TestRegisteredCommandsAreHandled(t *testing.T) {
-	want := []string{"start", "help", "template", "link", "qr", "status", "delete"}
+	want := []string{"start", "help", "build", "template", "link", "qr", "status", "delete"}
 	var got []string
 	for _, c := range Commands {
 		got = append(got, c.Name)

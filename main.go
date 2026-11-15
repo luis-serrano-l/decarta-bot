@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -109,6 +110,17 @@ func serve(cfg *config.Config, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	// Menus being built with /build. Old ones are also ignored when read;
+	// this keeps abandoned files from piling up.
+	drafts, err := store.NewFile(filepath.Join(cfg.StoragePath, "drafts"))
+	if err != nil {
+		return err
+	}
+	if n, err := drafts.Prune(time.Now().Add(-bot.DraftTTL)); err != nil {
+		logger.Warn("could not prune old drafts", "err", err)
+	} else if n > 0 {
+		logger.Info("old drafts removed", "count", n)
+	}
 
 	client := bot.NewClient(cfg.TelegramToken, bot.DefaultTelegramAPI, logger)
 	handler := bot.NewHandler(
@@ -118,7 +130,7 @@ func serve(cfg *config.Config, logger *slog.Logger) error {
 			AdminUserIDs:   cfg.AdminUserIDs,
 			MaxUploadBytes: cfg.MaxUploadBytes,
 		},
-		ids, pub, st,
+		ids, pub, st, drafts,
 		ratelimit.New(cfg.PublishLimit, cfg.PublishWindow, nil),
 		ratelimit.New(uploadsPerWindow, uploadWindow, nil),
 		ratelimit.New(accessRequestsPerHour, time.Hour, nil),
