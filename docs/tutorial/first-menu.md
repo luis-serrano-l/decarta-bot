@@ -160,6 +160,14 @@ Instead of a preview you get the exact place and the fix:
 
 Nothing was published; the page still shows your last good menu.
 
+## 9. Change it without a file
+
+You do not need the file for small changes. Send `/build`: the bot shows
+the menu that is online, with buttons. Tap **Add dish**, send
+`Tiramisu 6.50`, then tap **Done, preview** and **Publish**. **Edit /
+remove** changes a price or takes a dish off. The steps are in
+[Build a menu with buttons](../how-to/build-a-menu-with-buttons.md).
+
 ## Where to go next
 
 - Let someone else publish: they send `/request_access`, you receive their

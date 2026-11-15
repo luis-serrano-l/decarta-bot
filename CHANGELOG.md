@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `/build` and the **Build my menu** button on `/start`: build or change a
+  menu in the chat with buttons instead of typing the whole document. Add
+  sections and dishes (one line per dish, such as `Gazpacho 6.50`), change
+  a price, rename, describe or remove a dish or a section, then preview
+  and publish as before. It starts from the menu that is online, and the
+  draft is saved under `STORAGE_PATH/drafts` for 7 days, so it survives a
+  restart.
+
 ### Fixed
 
 - A publish that fails no longer counts towards the publish rate limit.

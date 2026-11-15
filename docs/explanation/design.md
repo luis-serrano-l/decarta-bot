@@ -68,6 +68,16 @@ once, only for its user, and never for a superseded preview. Keeping it in
 memory means a restart forgets it; the user sends the menu again. That is
 a deliberate trade against adding a database for a 15-minute value.
 
+A menu being built with `/build` is different. It holds many messages'
+worth of typing on a phone, over minutes or days, so losing it to a
+restart or a deploy would cost the owner real work. A draft is therefore a
+file, one per user, in `drafts/` on the same data volume that already holds
+the last published copies, written after every change and dropped after 7
+days without one. It is still not a database: the file is the whole state,
+named by the same opaque menu id, and deleting it loses nothing that is
+online. Every builder button carries the draft's revision number, so a
+button under an older message cannot act on a menu that has since changed.
+
 There are two rate limits. The publish limit is charged at **Publish**,
 not at upload, because commits to the site are what it meters. A second,
 much looser limit covers uploads, so that fixing typos and looking at
