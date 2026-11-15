@@ -17,13 +17,16 @@ editing a file. You need to be a publisher (see
    Croquetas 8
    ```
 
-   The bot answers with your menu so far. Keep sending dishes for as long
-   as you like.
+   Write them in the message box, as you would write to a person, and
+   send. The bot answers with the section so far. Keep sending dishes for
+   as long as you like.
 4. To describe the dish you just added, tap **Describe last dish** and
    send a sentence.
-5. Tap **Add section** for the next section, and send its dishes.
-6. When the menu is complete, tap **Done, preview**. Check the summary and
-   tap **Publish**.
+5. Tap **Back to menu**, then **Add section** for the next section, and
+   send its dishes.
+6. When the menu is complete, tap **Back to menu** and **Done, preview**.
+   Read the menu through and tap **Publish**.
+7. Wait for the message `✅ Your menu is online!`, about a minute later.
 
 If a line has no price, or the price is not a number, the bot tells you
 which line and how to write it. Nothing from that message is added; send
@@ -32,13 +35,13 @@ it again, corrected.
 ## Change the menu that is online
 
 1. Send `/build`. The bot shows the menu that is online.
-2. To add a dish, tap **Change section** if it belongs to another section,
-   then **Add dish**, and send it.
-3. To change a price, tap **Edit / remove**, choose the section, tap the
+2. To add a dish, tap **Add dish**, choose its section, and send it.
+3. To change a price, tap **Edit dishes**, choose the section, tap the
    dish, tap **Change price** and send the new price. You are taken back
    to the list, ready for the next dish.
 4. To take a dish off, tap it and then **Remove**.
-5. Tap **Back to menu**, then **Done, preview**, then **Publish**.
+5. To rename or remove a whole section, tap **Edit sections**.
+6. Tap **Back to menu**, then **Done, preview**, then **Publish**.
 
 ## Stop and continue later
 

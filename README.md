@@ -95,9 +95,10 @@ docker compose up -d --force-recreate --wait
 ```
 
 **7. Publish.** Send `/template` to the bot. It sends you `menu.json`; send
-that file straight back (or edit it first). The bot replies with a summary
-and two buttons. Tap **Publish**, then **Open my menu**. The page is live
-about a minute later, once the site has rebuilt.
+that file straight back (or edit it first). The bot replies with the menu
+as it read it and two buttons. Tap **Publish**. About a minute later, once
+the site has rebuilt, the bot tells you the menu is online; tap **Open my
+menu**.
 
 Something not working? `docker compose logs bot` says why; see
 [Run with Docker](docs/how-to/run-with-docker.md#troubleshooting).

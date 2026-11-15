@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and publish as before. It starts from the menu that is online, and the
   draft is saved under `STORAGE_PATH/drafts` for 7 days, so it survives a
   restart.
+- After **Publish** the bot watches the site and sends "Your menu is
+  online!" when the page really shows the new menu, instead of leaving the
+  owner to guess when the minute is over.
 
 ### Fixed
 
@@ -32,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The preview lists the whole menu, every section with its dishes and
+  prices, instead of counts and a price range.
+- After **Publish** the message says "Publishing your menu…" until the
+  page is online. To find out, the bot now makes read-only requests to the
+  public site (`HUGO_BASE_URL`).
 - The snap's Store description says what to put in the `.env` file and
   lists the commands to start, restart, stop and inspect the service.
 - New logo: a menu sheet with a "published" reply bubble, replacing the

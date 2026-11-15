@@ -27,7 +27,9 @@ sequenceDiagram
     B->>B: rate limit
     B->>G: PUT static/menus/<id>.json
     G->>P: Actions build (about a minute)
-    B->>T: "Menu published" + Open my menu
+    B->>T: "Publishing your menu…"
+    B->>P: GET menus/<id>.json until it is the new menu
+    B->>T: "Your menu is online!" + Open my menu
 ```
 
 What follows from that choice:
@@ -38,7 +40,9 @@ What follows from that choice:
   without a single menu going offline.
 - **Nothing to scale.** Reading is a CDN's job.
 - **About a minute of delay.** A publish is a commit, and the page appears
-  when the site's build finishes. The bot says so rather than hiding it.
+  when the site's build finishes. The bot says so rather than hiding it,
+  and looks at the public page (a plain read-only request) until the new
+  menu is there, so that it can tell the owner.
 
 ## Long polling, not webhooks
 
@@ -57,10 +61,10 @@ Tunnel, which would keep the "no open port" property, is on the
 ## Preview, then confirm
 
 Publishing replaces a public page, so it takes two steps: the bot shows
-what it understood (categories, item counts, price range), and publishes
-only when the owner taps **Publish**. The summary is the cheapest check
-that the right file was sent: "Items: 3" when you expected forty is
-obvious at a glance. `/delete` asks in the same way.
+what it understood (every section with its dishes and prices), and
+publishes only when the owner taps **Publish**. Reading the menu back is
+the cheapest check that the right file was sent: three dishes when you
+expected forty is obvious at a glance. `/delete` asks in the same way.
 
 The pending action lives in the bot's memory, one per user, for 15
 minutes. It is tied to its buttons by a random nonce, so a button works

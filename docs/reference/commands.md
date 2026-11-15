@@ -43,7 +43,7 @@ downloads and checks the menu the chat shows "typing…".
 
 | The menu is | The bot replies with |
 |---|---|
-| valid | A summary (each category with its item count, totals, price range) and the buttons **Publish** and **Cancel** |
+| valid | The menu as it will be published (every section with its dishes and prices; a very long menu is cut short with counts) and the buttons **Publish** and **Cancel** |
 | invalid | Up to five problems, each with the field path, what is wrong and how to fix it, and the total if there are more |
 | larger than `MAX_UPLOAD_BYTES` | The size limit |
 | not a menu at all (ordinary chat) | A hint to use `/template` |
@@ -55,16 +55,18 @@ you were working on, or else from the menu you have online, or else empty.
 Nothing changes online until you tap **Done, preview** and then
 **Publish**.
 
-The menu message lists every section with its dish count, and the dishes
-of the section you are adding to.
+Telegram has no text fields inside a message, so every answer is an
+ordinary message; each question says "Write it in the message box below
+and send it" and carries a **Back to menu** button.
 
-| Button | Effect |
+The menu message lists every section with its dishes and prices.
+
+| Button on the menu message | Effect |
 |---|---|
-| **Add dish** | The bot waits for dishes for the current section. Send one per line, the name then the price: `Gazpacho 6.50`. Several lines add several dishes, and you can keep sending more. |
-| **Describe last dish** | Asks for a description of the dish you just added. |
-| **Add section** | Asks for the section's name; tap a suggestion (Starters, Mains, Desserts, Drinks) or type your own. The new section becomes the current one. |
-| **Change section** | Choose which section dishes are added to. |
-| **Edit / remove** | Choose a section, then a dish (eight per page): **Change price**, **Rename**, **Description**, **Remove**. For the section itself: **Rename section**, **Remove section** (asks first). |
+| **Add dish** | Asks which section the dish is for (skipped when there is only one), then shows that section alone, with its dishes, and waits. Send one dish per line, the name then the price: `Gazpacho 6.50`. Several lines add several dishes, and you can keep sending more. The only buttons there are **Describe last dish**, which asks for a description of the dish you just added, and **Back to menu**. |
+| **Add section** | Asks for the section's name; tap a suggestion (Starters, Mains, Desserts, Drinks) or type your own. You are then taken to add its dishes. |
+| **Edit dishes** | Choose a section, then a dish (eight per page): **Change price**, **Rename**, **Description**, **Remove**. After a change you are back at the list of dishes. |
+| **Edit sections** | Choose a section: **Rename** or **Remove** (asks first, and removes its dishes). |
 | **Done, preview** | Checks the menu and shows the usual preview with **Publish** and **Cancel**, plus **Keep editing** to go back. |
 | **Cancel** | **Keep for later** or **Discard draft**. Neither changes what is online. |
 
@@ -102,7 +104,7 @@ The builder's own buttons are listed [above](#building-a-menu-with-buttons).
 | **Build my menu** | `/start` | Same as `/build` |
 | **Get a template** | `/start` | Same as `/template` |
 | **How it works** | `/start` | The steps from template to published page, and the list format |
-| **Publish** | A preview | Publishes the previewed menu. The message becomes "Menu published" with the link, a note that the page updates in about a minute, and the buttons **Open my menu** and **Get QR code**. |
+| **Publish** | A preview | Publishes the previewed menu. The message becomes "Publishing your menu…" with the link and a note that it takes about a minute. The bot then looks at the site every 10 seconds and, when the page really shows the new menu, sends "Your menu is online!" with the buttons **Open my menu** and **Get QR code**. If that has not happened after 5 minutes it says the page is taking longer than usual. Unpublishing or publishing again in the meantime cancels the message about the older menu. |
 | **Cancel** | A preview or a delete question | Discards it. Nothing changes. A draft in the builder is kept. |
 | **Yes, delete it** | `/delete` | Removes the menu from the site. The page disappears in about a minute. |
 | **Open my menu** | A published message, `/link`, `/status` | Opens the public page |
