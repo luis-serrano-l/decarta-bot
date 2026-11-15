@@ -344,3 +344,167 @@ func TestBuilderLimitsAndAccess(t *testing.T) {
 		}
 	})
 }
+
+// editFixture has a draft with two sections: Starters (Soup, Bread) and
+// Drinks (Water), with the menu message showing.
+func editFixture(t *testing.T) *fixture {
+	t.Helper()
+	f := newFixture(t)
+	f.send(allowedID, "/build")
+	f.press(allowedID, "Starters")
+	f.send(allowedID, "Soup 4.50\nBread 1")
+	f.press(allowedID, "📂 Add section")
+	f.press(allowedID, "Drinks")
+	f.send(allowedID, "Water 2")
+	return f
+}
+
+func TestBuilderEdit(t *testing.T) {
+	openSoup := func(f *fixture) {
+		f.press(allowedID, "✏️ Edit / remove")
+		f.press(allowedID, "Starters (2)")
+		f.press(allowedID, "Soup  4.50")
+	}
+	tests := []struct {
+		name       string
+		steps      func(*fixture)
+		wantReply  []string
+		wantDishes []string
+	}{
+		{"change price", func(f *fixture) {
+			openSoup(f)
+			f.press(allowedID, "💶 Change price")
+			f.send(allowedID, "5,25")
+		}, []string{"✅ Soup now costs 5.25.", "📂 Starters (2 dishes)"},
+			[]string{"Starters/Soup 5.25", "Starters/Bread 1.00", "Drinks/Water 2.00"}},
+		{"bad price keeps the question open", func(f *fixture) {
+			openSoup(f)
+			f.press(allowedID, "💶 Change price")
+			f.send(allowedID, "cheap")
+			f.send(allowedID, "5")
+		}, []string{"✅ Soup now costs 5.00."},
+			[]string{"Starters/Soup 5.00", "Starters/Bread 1.00", "Drinks/Water 2.00"}},
+		{"rename dish", func(f *fixture) {
+			openSoup(f)
+			f.press(allowedID, "✏️ Rename")
+			f.send(allowedID, "Soup of the day")
+		}, []string{"✅ Renamed to Soup of the day."},
+			[]string{"Starters/Soup of the day 4.50", "Starters/Bread 1.00", "Drinks/Water 2.00"}},
+		{"remove dish", func(f *fixture) {
+			openSoup(f)
+			f.press(allowedID, "🗑 Remove")
+		}, []string{"🗑 Removed Soup.", "📂 Starters (1 dish)"},
+			[]string{"Starters/Bread 1.00", "Drinks/Water 2.00"}},
+		{"rename section", func(f *fixture) {
+			f.press(allowedID, "✏️ Edit / remove")
+			f.press(allowedID, "Drinks (1)")
+			f.press(allowedID, "✏️ Rename section")
+			f.send(allowedID, "Bebidas")
+		}, []string{"✅ The section is now called Bebidas."},
+			[]string{"Starters/Soup 4.50", "Starters/Bread 1.00", "Bebidas/Water 2.00"}},
+		{"remove section asks first", func(f *fixture) {
+			f.press(allowedID, "✏️ Edit / remove")
+			f.press(allowedID, "Starters (2)")
+			f.press(allowedID, "🗑 Remove section")
+		}, []string{"Remove the section Starters and its 2 dishes"},
+			[]string{"Starters/Soup 4.50", "Starters/Bread 1.00", "Drinks/Water 2.00"}},
+		{"remove section", func(f *fixture) {
+			f.press(allowedID, "✏️ Edit / remove")
+			f.press(allowedID, "Starters (2)")
+			f.press(allowedID, "🗑 Remove section")
+			f.press(allowedID, "Yes, remove it")
+		}, []string{"🗑 Removed the section Starters.", "📂 Drinks (1)"}, []string{"Drinks/Water 2.00"}},
+		{"text while browsing is not a dish", func(f *fixture) {
+			openSoup(f)
+			f.send(allowedID, "Salad 7")
+		}, []string{"does not look like a menu"},
+			[]string{"Starters/Soup 4.50", "Starters/Bread 1.00", "Drinks/Water 2.00"}},
+		{"back from a dish returns to the list", func(f *fixture) {
+			openSoup(f)
+			f.press(allowedID, "⬅️ Back")
+			f.press(allowedID, "⬅️ Back to menu")
+		}, []string{"Your menu (draft)", "What next?"},
+			[]string{"Starters/Soup 4.50", "Starters/Bread 1.00", "Drinks/Water 2.00"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := editFixture(t)
+			tt.steps(f)
+			got := f.tg.last(allowedID)
+			for _, want := range tt.wantReply {
+				if !strings.Contains(got, want) {
+					t.Errorf("reply = %q, want it to contain %q", got, want)
+				}
+			}
+			if got := dishes(f.draftOf(allowedID)); !slices.Equal(got, tt.wantDishes) {
+				t.Errorf("draft = %q, want %q", got, tt.wantDishes)
+			}
+			assertNoRawIDs(t, f.logs.String())
+		})
+	}
+}
+
+func TestBuilderEditDescription(t *testing.T) {
+	f := editFixture(t)
+	open := func() {
+		f.press(allowedID, "✏️ Edit / remove")
+		f.press(allowedID, "Drinks (1)")
+		f.press(allowedID, "Water  2.00")
+		f.press(allowedID, "📝 Description")
+	}
+	open()
+	if got := labels(f.tg.lastMsg(allowedID)); !slices.Equal(got, []string{"⬅️ Back"}) {
+		t.Fatalf("buttons without a description = %q", got)
+	}
+	f.send(allowedID, "Still, 50 cl")
+	if got := f.draftOf(allowedID).Menu.Categories[1].Items[0].Description; got != "Still, 50 cl" {
+		t.Fatalf("description = %q", got)
+	}
+	f.press(allowedID, "Water  2.00")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Still, 50 cl") {
+		t.Errorf("dish screen = %q", got)
+	}
+	f.press(allowedID, "📝 Description")
+	f.press(allowedID, "🗑 Remove the description")
+	if got := f.draftOf(allowedID).Menu.Categories[1].Items[0].Description; got != "" {
+		t.Errorf("description after removal = %q", got)
+	}
+}
+
+func TestBuilderRemoveLastSectionAndPaging(t *testing.T) {
+	f := newFixture(t)
+	f.send(allowedID, "/build")
+	f.press(allowedID, "Starters")
+	var b strings.Builder
+	for i := 1; i <= 19; i++ {
+		fmt.Fprintf(&b, "Dish %02d 1\n", i)
+	}
+	f.send(allowedID, b.String())
+
+	// One section: Edit / remove goes straight to its dishes.
+	f.press(allowedID, "✏️ Edit / remove")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Page 1 of 3") {
+		t.Fatalf("list = %q", got)
+	}
+	f.press(allowedID, "Next ▶️")
+	f.press(allowedID, "Next ▶️")
+	if got := labels(f.tg.lastMsg(allowedID)); !slices.Equal(got[:4], []string{"Dish 17  1.00", "Dish 18  1.00", "Dish 19  1.00", "◀️ Previous"}) {
+		t.Fatalf("last page buttons = %q", got)
+	}
+	f.press(allowedID, "Dish 17  1.00")
+	f.press(allowedID, "⬅️ Back")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Page 3 of 3") {
+		t.Errorf("back from a dish = %q", got)
+	}
+
+	f.press(allowedID, "🗑 Remove section")
+	f.press(allowedID, "Yes, remove it")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "What is your first section called?") {
+		t.Errorf("after removing the only section = %q", got)
+	}
+	f.press(allowedID, "Mains")
+	f.press(allowedID, "✅ Done, preview")
+	if got := f.tg.last(allowedID); !strings.Contains(got, "Mains (0 items)") {
+		t.Errorf("preview = %q", got)
+	}
+}
