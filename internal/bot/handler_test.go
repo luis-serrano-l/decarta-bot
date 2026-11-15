@@ -299,6 +299,9 @@ func newFixture(t *testing.T) *fixture {
 		slog.New(slog.NewTextHandler(f.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
 	)
 	f.h.now = clock
+	// Watching the site after a publish is off unless a test sets
+	// f.h.opts.Site; then it must not take real seconds.
+	f.h.liveWait, f.h.liveEvery, f.h.liveFor = time.Millisecond, time.Millisecond, 50*time.Millisecond
 	return f
 }
 

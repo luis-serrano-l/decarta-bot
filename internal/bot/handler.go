@@ -129,6 +129,9 @@ type Options struct {
 	AllowedUserIDs []int64 // may publish
 	AdminUserIDs   []int64 // may publish, receive access requests
 	MaxUploadBytes int64   // cap on a submitted menu, text or file
+	// Site, if set, is watched after a publish so that the user can be
+	// told when their menu is online.
+	Site SiteChecker
 }
 
 // Handler processes Telegram updates.
@@ -150,6 +153,11 @@ type Handler struct {
 	busy    map[string]struct{} // menu ids with a publish or delete in flight
 	// draftLocks holds one lock per menu id that has used the builder.
 	draftLocks map[string]*sync.Mutex
+	// watchGen counts publishes and deletes per menu id; see watchLive.
+	watchGen map[string]int
+	watches  sync.WaitGroup
+
+	liveWait, liveEvery, liveFor time.Duration
 }
 
 // pending is an action waiting for its confirmation button. It lives in
@@ -178,6 +186,8 @@ func NewHandler(opts Options, ids *menuid.Generator, pub publisher.Publisher, st
 		busy:    make(map[string]struct{}),
 
 		draftLocks: make(map[string]*sync.Mutex),
+		watchGen:   make(map[string]int),
+		liveWait:   liveFirstCheck, liveEvery: liveInterval, liveFor: liveTimeout,
 	}
 }
 
@@ -644,6 +654,12 @@ func (h *Handler) confirmPublish(ctx context.Context, u user, msgID int, nonce s
 
 	h.log.Info("menu published", "id", u.id, "bytes", len(p.content))
 	url := h.menuURL(u.id)
+	if h.opts.Site != nil {
+		h.edit(u, msgID, "⏳ Publishing your menu…\n\nThis takes about a minute. "+
+			"I will send you a message here as soon as it is online.\n\n🔗 "+url)
+		h.watchLive(u, p.content)
+		return
+	}
 	h.edit(u, msgID, "✅ Menu published!\n\n🔗 "+url+
 		"\n\nThe page updates in about a minute. Use /link anytime to get this link again, or /qr for a QR code.",
 		openButton(url), []Button{{Text: "Get QR code", Data: actQR}})
@@ -678,7 +694,8 @@ func (h *Handler) confirmDelete(ctx context.Context, u user, msgID int, nonce st
 		h.log.Warn("could not remove the local copy", "id", u.id, "err", serr)
 	}
 	h.dropDraft(u)
-	if err != nil { // ErrNotFound
+	h.supersede(u.id) // a publish still being watched must not report "online"
+	if err != nil {   // ErrNotFound
 		h.edit(u, msgID, "ℹ️ There was no published menu to delete.")
 		return
 	}

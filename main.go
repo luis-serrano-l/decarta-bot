@@ -129,6 +129,7 @@ func serve(cfg *config.Config, logger *slog.Logger) error {
 			AllowedUserIDs: cfg.AllowedUserIDs,
 			AdminUserIDs:   cfg.AdminUserIDs,
 			MaxUploadBytes: cfg.MaxUploadBytes,
+			Site:           bot.NewHTTPSite(cfg.SiteBaseURL),
 		},
 		ids, pub, st, drafts,
 		ratelimit.New(cfg.PublishLimit, cfg.PublishWindow, nil),
